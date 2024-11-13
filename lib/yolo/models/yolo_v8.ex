@@ -1,5 +1,6 @@
 defmodule YOLO.Models.YoloV8 do
   @behaviour YOLO.Model
+
   @doc """
   Prepares the image to be given as an input of the model.
   The `image_nx` tensor must be a `{640, 640, 3}`
@@ -32,23 +33,22 @@ defmodule YOLO.Models.YoloV8 do
           "the input image tensor must be of shape `{640, 640, 3}` instead of " <> inspect(shape)
   end
 
-
   @doc """
   Evaluates the model's output returning a filtered list of detected objects.
   Options:
-  * `filter_threshold` by default is `0.5`.
-  * `nms_threshold` by default is `0.5`.
+  * `prob_threshold` by default is `0.5`.
+  * `nms_iou_threshold` by default is `0.5`.
   """
   @impl true
+  @spec postprocess(Nx.Tensor.t(), Keyword.t()) :: [YOLO.Model.detected_object()]
   def postprocess(model_output_nx, opts) do
-    filter_threshold = Keyword.fetch!(opts, :filter_threshold)
-    # _nms_threshold = Keyword.fetch!(opts, :nms_threshold)
+    prob_threshold = Keyword.fetch!(opts, :prob_threshold)
+    nms_iou_threshold = Keyword.fetch!(opts, :nms_iou_threshold)
 
     model_output_nx
     # from {1, 84, 8400} to {8400, 84}
     |> postprocess_transpose()
-    |> postprocess_filter_predictions(filter_threshold)
-
+    |> YOLO.NMS.nms(prob_threshold, nms_iou_threshold)
   end
 
   defp postprocess_transpose(output_nx) do
@@ -59,32 +59,5 @@ defmodule YOLO.Models.YoloV8 do
     |> Nx.transpose(axes: [1, 0])
   end
 
-  # keeps only the detections with a probability higher than `:filter_threshold`
-  # `output_nx` is `{8400, 84}`
-  # returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`
-  # implementation inspired by Hans Elias B. Josephsen's talk (12:06 you can see the filter function)
-  # https://youtu.be/OsxGB6MbA8o?si=cOv9HFAQrWJ8z_D8&t=726
-  @spec postprocess_filter_predictions(Nx.Tensor.t(), float()) :: [[float()]]
-  defp postprocess_filter_predictions(output_nx, filter_threshold) do
-    bboxes = Nx.slice(output_nx, [0, 0], [8400, 4])
-    # focusing on the class predictions
-    probs = Nx.slice(output_nx, [0, 4], [8400, 80])
-    # getting the max probability for each row (for each detected object)
-    max_prob = Nx.reduce_max(probs, axes: [1])
-    # for each row (each detected object) get the class index with max prob
-    max_prob_class = Nx.argmax(probs, axis: 1)
-
-    # returning the indices of a descending ordered `max_prob` tensor
-    sorted_idx = Nx.argsort(max_prob, direction: :desc)
-
-
-    # concatenating the columns [cx, cy, w, h, prob, class] and getting the rows in sorted desc order
-    detected_objects =
-      Nx.concatenate([bboxes, Nx.new_axis(max_prob, 1), Nx.new_axis(max_prob_class, 1)], axis: 1)
-      |> Nx.take(sorted_idx)
-
-    # taking only the rows above the given probability threshold
-    Enum.take_while(Nx.to_list(detected_objects), fn [_cx, _cy, _w, _h, prob, _class] -> prob >= filter_threshold end)
-  end
 
 end

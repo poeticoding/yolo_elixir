@@ -4,9 +4,7 @@ defmodule YOLO.Models.YoloV8Test do
 
   import YOLO.Helpers
 
-  @models_dir Path.join(["priv", "models"])
-  @model_path Path.join(@models_dir, "yolov8n.onnx")
-  @classes_path Path.join(@models_dir, "classes.json")
+  # @classes_path Path.join(["priv", "models", "yolov8_coco_classes.json"])
 
   @fixtures_path Path.join(["test", "fixtures"])
   # {640, 640, 3}
@@ -15,18 +13,18 @@ defmodule YOLO.Models.YoloV8Test do
   @original_image_path Path.join(@fixtures_path, "traffic_original.jpg")
 
   setup_all _ctx do
-    model = YOLO.Model.load(model_path: @model_path, classes_path: @classes_path, model_impl: YOLO.Models.YoloV8)
     resized_image = open_image_to_nx(@resized_image_path)
     original_image = open_image_to_nx(@original_image_path)
 
     # model output used to test postprocess/2
     model_output =
-      resized_image
-      |> YoloV8.preprocess()
-      |> then(&YOLO.Model.run(model, &1))
+      @fixtures_path
+      |> Path.join("traffic640_yolov8n_output.bin")
+      |> File.read!()
+      |> Nx.from_binary({:f, 32})
+      |> Nx.reshape({84, 8400})
 
-
-    %{model: model, resized_image: resized_image, original_image: original_image, model_output: model_output}
+    %{resized_image: resized_image, original_image: original_image, model_output: model_output}
   end
 
   describe "preprocess/1" do
@@ -43,21 +41,23 @@ defmodule YOLO.Models.YoloV8Test do
     end
   end
 
-  describe "run/2" do
-    setup %{resized_image: image_nx} do
-      # need to generate `input` for each test because
-      # Ortex.Model.run/2 has side effects on the memory
-      %{input: YoloV8.preprocess(image_nx)}
-    end
-
-    test "outputs a {1, 84, 8400} tensor", %{model: model, input: input} do
-      assert {1, 84, 8400} = YOLO.Model.run(model, input).shape
-    end
-  end
-
   describe "postprocess/2" do
-    test "returns the filtered result maps", %{model_output: model_output} do
-      YoloV8.postprocess(model_output, [])
+    test "returns the filtered result with probability >= 0.5", %{model_output: model_output} do
+      detected_objects = YoloV8.postprocess(model_output, prob_threshold: 0.5, nms_iou_threshold: 0.5)
+
+      assert Enum.count(detected_objects) > 0
+
+      for [_cx, _cy, _w, _h, prob, class] <- detected_objects do
+        assert 0.5 <= prob and prob <= 1
+
+        # image is traffic640.jpg
+        # 0 -> person
+        # 2 -> car
+        # 5 -> bus
+        # 9 -> traffic light
+        # 12 -> parking meter
+        assert round(class) in [0, 2, 5, 9, 12]
+      end
     end
   end
 end

@@ -1,11 +1,9 @@
 defmodule YOLO.Model do
-  @enforce_keys [:ref, :classes, :model_impl]
+  @enforce_keys [:ref, :model_impl]
   defstruct [:ref, :classes, :model_impl]
 
   @type t :: %__MODULE__{
           ref: Ortex.Model.t(),
-          # object class names
-          classes: [String.t()],
           # module implementing the behaviour
           model_impl: module()
         }
@@ -20,11 +18,10 @@ defmodule YOLO.Model do
         }
 
   @default_load_options [model_impl: YOLO.Models.YoloV8]
-  @default_detect_options [filter_threshold: 0.5, nms_threshold: 0.5]
+  @default_detect_options [prob_threshold: 0.5, nms_iou_threshold: 0.5]
 
   @callback preprocess(Nx.Tensor.t()) :: Nx.Tensor.t()
   @callback postprocess(Nx.Tensor.t(), Keyword.t()) :: [detected_object()]
-
 
   @doc """
   Loads the model and returns a `YOLO.Model.t()` struct where:
@@ -54,13 +51,12 @@ defmodule YOLO.Model do
 
   """
   @spec detect(t(), Nx.Tensor.t(), Keyword.t()) :: [Model.detected_object()]
-  def detect(%{model_impl: impl}=model, image_nx, opts \\ []) do
+  def detect(%{model_impl: impl} = model, image_nx, opts \\ []) do
     opts = Keyword.merge(@default_detect_options, opts)
     image_nx = impl.preprocess(image_nx)
-    impl.run(model, image_nx)
+    run(model, image_nx)
     impl.postprocess(opts)
   end
-
 
   @doc """
   Runs the model for the given tensor and returns the output tensor.
@@ -76,6 +72,4 @@ defmodule YOLO.Model do
     {output} = Ortex.run(model.ref, image_tensor)
     Nx.backend_transfer(output)
   end
-
-
 end
