@@ -37,18 +37,18 @@ defmodule YOLO.Models.YoloV8 do
   Evaluates the model's output returning a filtered list of detected objects.
   Options:
   * `prob_threshold` by default is `0.5`.
-  * `nms_iou_threshold` by default is `0.5`.
+  * `iou_threshold` by default is `0.5`.
   """
   @impl true
   @spec postprocess(Nx.Tensor.t(), Keyword.t()) :: [YOLO.Model.detected_object()]
   def postprocess(model_output_nx, opts) do
     prob_threshold = Keyword.fetch!(opts, :prob_threshold)
-    nms_iou_threshold = Keyword.fetch!(opts, :nms_iou_threshold)
+    iou_threshold = Keyword.fetch!(opts, :iou_threshold)
 
     model_output_nx
     # from {1, 84, 8400} to {8400, 84}
     |> postprocess_transpose()
-    |> YOLO.NMS.nms(prob_threshold, nms_iou_threshold)
+    |> YOLO.NMS.run(prob_threshold, iou_threshold)
   end
 
   defp postprocess_transpose(output_nx) do

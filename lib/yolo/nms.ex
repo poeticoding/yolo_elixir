@@ -9,34 +9,21 @@ defmodule YOLO.NMS do
   2. Pick box with largest `prob`.
   3. Discard any remaining box with IoU >= `iou_threshold` (`0.5` by default).
   """
-  @spec nms(Nx.Tensor.t(), float(), float()) :: [[float()]]
-  def nms(tensor, prob_threshold, nms_iou_threshold) do
-    # `tensor` rows are the results sorted desc by probability.
+
+  @doc """
+  `run` filters out the low prob detections (`p < prob_threshold`) and runs NMS for each class,
+  discarding bboxes that have a IoU above the given `iou_threshold`.
+
+  `tensor` must be `{8400, 84}` (transposed YoloV8n output shape).
+
+  returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`
+  """
+  @spec run(Nx.Tensor.t(), float(), float()) :: [[float()]]
+  def run(tensor, prob_threshold, iou_threshold) do
     tensor
     |> filter_predictions(prob_threshold)
-    |> do_nms(nms_iou_threshold)
-  end
-
-  defp do_nms(bboxes, nms_iou_threshold) do
-    bboxes
-    # group by classes
-    |> Enum.group_by(fn [_cx, _cy, _w, _h, _prob, class] -> class end)
-    # run nms for each class
-    |> Enum.reduce([], fn {_class, [high_prob_bbox | rest] = _class_bboxes}, kept_boxes ->
-      kept_class_boxes =
-        Enum.reduce(rest, [high_prob_bbox], fn bbox, kept_class_boxes ->
-          # [xc, yc, w, h, _, _]
-          if Enum.all?(kept_class_boxes, fn valid_bbox ->
-               iou(valid_bbox, bbox) <= nms_iou_threshold
-             end) do
-            [bbox | kept_class_boxes]
-          else
-            kept_class_boxes
-          end
-        end)
-
-      [kept_class_boxes | kept_boxes]
-    end)
+    # the results sorted desc by probability
+    |> nms(iou_threshold)
   end
 
   @doc """
@@ -67,6 +54,39 @@ defmodule YOLO.NMS do
     # taking only the rows above the given probability threshold
     Enum.take_while(Nx.to_list(detected_objects), fn [_cx, _cy, _w, _h, prob, _class] ->
       prob >= prob_threshold
+    end)
+  end
+
+  def nms(bboxes, iou_threshold) do
+    bboxes
+    # group results by class
+    |> Enum.group_by(fn [_cx, _cy, _w, _h, _prob, class] -> class end)
+    # run nms for each class
+    # keep the highest prob bbox and compare the IoU with rest of the bbox of the same class.
+    # keep all the bbox below the given `iou_threshold`.
+    |> Enum.reduce([], fn {_class, class_bboxes}, kept_bboxes ->
+      # adding the results for the given class
+      kept_bboxes ++ class_nms(class_bboxes, iou_threshold)
+    end)
+  end
+
+  # `bboxes` are in the same class
+  # returning the non-suppresed bboxes
+  defp class_nms([high_prob_bbox | rest] = _class_bboxes, iou_threshold) do
+    Enum.reduce(rest, [high_prob_bbox], fn bbox, kept_class_bboxes ->
+      # [xc, yc, w, h, _, _]
+      if iou_below_all?(bbox, kept_class_bboxes, iou_threshold) do
+        # not  overlapping, keeping it.
+        [bbox | kept_class_bboxes]
+      else
+        kept_class_bboxes
+      end
+    end)
+  end
+
+  defp iou_below_all?(bbox, kept_bboxes, iou_threshold) do
+    Enum.all?(kept_bboxes, fn valid_bbox ->
+      iou(valid_bbox, bbox) <= iou_threshold
     end)
   end
 

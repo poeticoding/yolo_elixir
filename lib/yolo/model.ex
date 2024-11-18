@@ -18,7 +18,7 @@ defmodule YOLO.Model do
         }
 
   @default_load_options [model_impl: YOLO.Models.YoloV8]
-  @default_detect_options [prob_threshold: 0.5, nms_iou_threshold: 0.5]
+  @default_detect_options [prob_threshold: 0.5, iou_threshold: 0.5]
 
   @callback preprocess(Nx.Tensor.t()) :: Nx.Tensor.t()
   @callback postprocess(Nx.Tensor.t(), Keyword.t()) :: [detected_object()]

@@ -15,6 +15,49 @@ defmodule YOLO.NMSTest do
     %{input: nms_input}
   end
 
+  describe "nms/2" do
+    test "when all rows have same bbox, same prob, same class, discards all the bboxes but first" do
+      bbox = [100.0, 100.0, 30.0, 30.0]
+      # prob > 0.5
+      # class = 0
+      input = [
+        bbox ++ [0.81, 0.0],
+        bbox ++ [0.8, 0.0],
+        bbox ++ [0.6, 0.0]
+      ]
+
+      # iou > 0.5 -> discard
+      # keeping only the first row
+      assert [bbox ++ [0.81, 0.0]] == NMS.nms(input, 0.5)
+    end
+
+    test "nms is run separately for each class" do
+      bbox = [100.0, 100.0, 30.0, 30.0]
+      # prob > 0.5
+      # class = 0
+      people = [
+        bbox ++ [0.81, 0.0],
+        bbox ++ [0.8, 0.0],
+        bbox ++ [0.6, 0.0]
+      ]
+
+      # same bbox as people
+      bikes = [
+        bbox ++ [0.81, 1.0],
+        bbox ++ [0.8, 1.0],
+        bbox ++ [0.6, 1.0]
+      ]
+
+      # keeping one bbox for person and one bbox for bike
+      assert MapSet.new([
+               # person
+               bbox ++ [0.81, 0.0],
+               # bike
+               bbox ++ [0.81, 1.0]
+             ]) == MapSet.new(NMS.nms(people ++ bikes, 0.5))
+    end
+  end
+
   describe "filter_predictions/2" do
     test "filters out rows with max detection prob under 0.7", %{input: input} do
       assert {8400, 84} == input.shape
