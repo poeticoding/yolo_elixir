@@ -1,10 +1,12 @@
 defmodule YOLO.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :yolo,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -26,7 +28,8 @@ defmodule YOLO.MixProject do
       {:ortex, "~> 0.1.9"},
       {:nx, "~> 0.9.1"},
       {:exla, "~> 0.9.1"},
-      {:image, "~> 0.54.4", only: [:dev, :test]}
+      {:image, "~> 0.54.4", only: [:dev, :test]},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 end
