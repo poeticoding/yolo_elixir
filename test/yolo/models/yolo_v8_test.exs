@@ -43,7 +43,8 @@ defmodule YOLO.Models.YoloV8Test do
 
   describe "postprocess/2" do
     test "returns the filtered result with probability >= 0.5", %{model_output: model_output} do
-      detected_objects = YoloV8.postprocess(model_output, prob_threshold: 0.5, nms_iou_threshold: 0.5)
+      detected_objects =
+        YoloV8.postprocess(model_output, prob_threshold: 0.5, nms_iou_threshold: 0.5)
 
       assert Enum.count(detected_objects) > 0
 

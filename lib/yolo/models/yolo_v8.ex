@@ -58,6 +58,4 @@ defmodule YOLO.Models.YoloV8 do
     # transpose, 8400 rows are the detected objects, 84 bbox and probs
     |> Nx.transpose(axes: [1, 0])
   end
-
-
 end

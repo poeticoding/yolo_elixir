@@ -4,14 +4,13 @@ defmodule YOLO.NMSTest do
 
   @fixtures_path Path.join(["test", "fixtures"])
   setup_all _ctx do
-
-  nms_input =
-    @fixtures_path
-    |> Path.join("traffic640_yolov8n_output.bin")
-    |> File.read!()
-    |> Nx.from_binary({:f, 32})
-    |> Nx.reshape({84, 8400})
-    |> Nx.transpose(axes: [1, 0])
+    nms_input =
+      @fixtures_path
+      |> Path.join("traffic640_yolov8n_output.bin")
+      |> File.read!()
+      |> Nx.from_binary({:f, 32})
+      |> Nx.reshape({84, 8400})
+      |> Nx.transpose(axes: [1, 0])
 
     %{input: nms_input}
   end
@@ -26,7 +25,7 @@ defmodule YOLO.NMSTest do
         |> Enum.map(fn [_, _, _, _, prob, _class] -> prob end)
 
       assert Enum.count(filtered_probs) > 0
-      for p <- filtered_probs, do: assert p >= 0.7
+      for p <- filtered_probs, do: assert(p >= 0.7)
     end
   end
 
@@ -38,7 +37,7 @@ defmodule YOLO.NMSTest do
 
       # intersection = 4
       # union = 86
-      assert NMS.iou(a, b) == 4/86
+      assert NMS.iou(a, b) == 4 / 86
     end
 
     test "iou > 0.5. Two bboxes with the same center with same area" do
@@ -48,7 +47,7 @@ defmodule YOLO.NMSTest do
       # intersection = 6*6 = 36
       # union = 6*8 + 8*6 - 36 = 60
       # iou = 36/60 = 0.6
-      assert NMS.iou(a, b) == 36/60
+      assert NMS.iou(a, b) == 36 / 60
     end
 
     test "iou = 1 when bboxes are equal" do
