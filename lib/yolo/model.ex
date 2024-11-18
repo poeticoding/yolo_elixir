@@ -1,4 +1,35 @@
 defmodule YOLO.Model do
+  @moduledoc """
+  Defines the `YOLO.Model` behavior for implementing custom YOLO model versions.
+  This module provides the foundational structure for loading YOLO models,
+  processing input tensors, and interpreting detection results.
+
+  Developers can implement this behavior to support different YOLO model variants
+  or customize preprocessing and postprocessing logic.
+
+  ## Key Features
+
+  - **Behavior Callbacks**:
+    - `preprocess/1`: Prepares input image tensors for the model.
+    - `postprocess/2`: Interprets the model's raw output into a list of detected objects.
+
+  - **Default Implementation**:
+    A default implementation is provided via `YOLO.Models.YoloV8`,
+    but developers can define their own by specifying the `model_impl` option during model loading.
+
+
+  ## Key Types
+
+  - `YOLO.Model.t()`: Struct representing a loaded YOLO model, including a reference to the ONNX model,
+    the implementing module, and class labels.
+  - `detected_object()`: Map representing a detected object, including its bounding box, class idx, and probability.
+
+  ## Usage
+  1. **Load a Model**: Use `YOLO.Model.load/1` to load a YOLO model,
+  specifying the custom implementation via the `model_impl` option.
+
+  3. **Run Object Detection**: Use `YOLO.Model.detect/3` to process an input image tensor and retrieve detected objects.
+  """
   @enforce_keys [:ref, :model_impl]
   defstruct [:ref, :classes, :model_impl]
 

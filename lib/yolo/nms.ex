@@ -1,22 +1,27 @@
 defmodule YOLO.NMS do
   @moduledoc """
-  Elixir NMS (Non-Max Suppression)
-  You can find more on NMS on https://builtin.com/machine-learning/non-maximum-suppression
+  Elixir NMS (Non-Maximum Suppression)
 
-  This implementation runs NMS independently on each of the output classes.
-  Here's the step that are run for each class:
-  1. Discard all the bboxes with `prob <= filter_threshold` (`0.5` by default).
-  2. Pick box with largest `prob`.
-  3. Discard any remaining box with IoU >= `iou_threshold` (`0.5` by default).
+  Learn more about Non-Maximum Suppression (NMS) at:
+  https://builtin.com/machine-learning/non-maximum-suppression
+
+  This implementation applies NMS independently for each output class.
+  The following steps are executed for each class:
+  1. Filter out all bounding boxes with maximum class probability below `prob_threshold` (default: `0.5`).
+  2. Select the bounding box with the highest `prob`.
+  3. Remove any remaining bounding boxes with an IoU >= `iou_threshold` (default: `0.5`).
   """
 
   @doc """
-  `run` filters out the low prob detections (`p < prob_threshold`) and runs NMS for each class,
-  discarding bboxes that have a IoU above the given `iou_threshold`.
+  Runs both `filter_predictions/2` and `nms/2`.
 
-  `tensor` must be `{8400, 84}` (transposed YoloV8n output shape).
+  1. Filters out detections with a probability below `prob_threshold` (`p < prob_threshold`)
+  2. Applies Non-Maximum Suppression (NMS) for each class, discarding bounding boxes with an
+     IoU exceeding the specified `iou_threshold`.
 
-  returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`
+  The input `tensor` must have the shape `{8400, 84}` (transposed YOLOv8 output format).
+
+  Returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`.
   """
   @spec run(Nx.Tensor.t(), float(), float()) :: [[float()]]
   def run(tensor, prob_threshold, iou_threshold) do
@@ -27,10 +32,13 @@ defmodule YOLO.NMS do
   end
 
   @doc """
-  Keeps only the detections with a probability higher than `:prob_threshold`
-  `tensor` must be `{8400, 84}` (transposed YoloV8n output shape)
-  returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`
-  implementation inspired by Hans Elias B. Josephsen's talk (12:06 you can see the filter function)
+  Filters detections, keeping only those with a probability higher than `:prob_threshold`.
+
+  The input `tensor` must have the shape `{8400, 84}` (transposed YOLOv8 output format).
+
+  Returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`.
+
+  This implementation is inspired by Hans Elias B. Josephsen's talk (see the filter function at 12:06):
   https://youtu.be/OsxGB6MbA8o?t=726
   """
   @spec filter_predictions(Nx.Tensor.t(), float()) :: [[float()]]
@@ -57,6 +65,10 @@ defmodule YOLO.NMS do
     end)
   end
 
+  @doc """
+  Applies Non-Maximum Suppression (NMS) for each class, discarding bounding boxes with an
+  IoU exceeding the specified `iou_threshold`.
+  """
   def nms(bboxes, iou_threshold) do
     bboxes
     # group results by class
