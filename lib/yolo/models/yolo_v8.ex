@@ -1,4 +1,9 @@
 defmodule YOLO.Models.YoloV8 do
+  @moduledoc """
+  YOLOv8 model implementation for preprocessing input images, running inference,
+  and postprocessing detections using non-maximum suppression (NMS).
+  """
+
   @behaviour YOLO.Model
 
   @doc """
