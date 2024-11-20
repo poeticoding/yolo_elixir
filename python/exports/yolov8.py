@@ -8,9 +8,11 @@ MODEL_SIZE = "n"
 IMAGE_SIZE = 640
 PT_MODEL_URL = f"https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8{MODEL_SIZE}.pt"
 
-pt_file = f"yolov8{MODEL_SIZE}.pt"
-model_file = f"yolov8{MODEL_SIZE}.onnx"
-classes_file = "classes.json"
+export_dir = "models"
+
+pt_file = f"{export_dir}/yolov8{MODEL_SIZE}.pt"
+model_file = f"{export_dir}/yolov8{MODEL_SIZE}.onnx"
+classes_file = f"{export_dir}/yolov8{MODEL_SIZE}_classes.json"
 
 
 def download_pt_model(url, path):
