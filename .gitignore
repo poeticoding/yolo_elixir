@@ -27,5 +27,7 @@ yolo-*.tar
 
 .DS_Store
 
+# model directories
 /priv/models/*.onnx
 /priv/models/*.pt
+/models/
