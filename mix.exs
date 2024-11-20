@@ -35,10 +35,8 @@ defmodule YOLO.MixProject do
       {:ortex, "~> 0.1.9"},
       {:nx, "~> 0.9.1"},
       {:exla, "~> 0.9.1"},
-
-      # {:image, "~> 0.54.4", only: [:test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.35", only: :dev, runtime: false}
     ]
   end
 
