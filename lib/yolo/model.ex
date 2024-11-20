@@ -33,17 +33,24 @@ defmodule YOLO.Model do
   @enforce_keys [:ref, :model_impl]
   defstruct [:ref, :classes, :model_impl]
 
+  @type classes :: %{integer() => String.t()}
+
   @type t :: %__MODULE__{
           ref: Ortex.Model.t(),
           # module implementing the behaviour
-          model_impl: module()
+          model_impl: module(),
+          classes: classes()
         }
+
+  @type shape :: {integer(), integer()}
 
   @type detected_object :: %{
           # Object bounding box. cx, cy, w, h
-          bbox: {integer(), integer(), integer(), integer()},
+          bbox: %{cx: integer(), cy: integer(), w: integer(), h: integer()},
           # object class name
           class: String.t(),
+          # class index
+          class_idx: integer(),
           # detection probability
           prob: float()
         }
@@ -64,7 +71,6 @@ defmodule YOLO.Model do
   * `model_path`: path to the `.onnx` you want to load. (Required)
   * `classes_path`: path to the `.json` file containing the YOLO classes. (Required)
   * `model_impl`: the module implementing the `YOLO.Model` behaviour. (Default is `YOLO.Models.YoloV8`).
-
   """
   @spec load(Keyword.t()) :: t()
   def load(options) do
@@ -73,20 +79,38 @@ defmodule YOLO.Model do
     model_path = Keyword.fetch!(options, :model_path)
     classes_path = Keyword.fetch!(options, :classes_path)
     model = Ortex.load(model_path)
-    classes = File.read!(classes_path)
+    classes = load_classes(classes_path)
     %__MODULE__{ref: model, classes: classes, model_impl: model_impl}
   end
 
+  defp load_classes(classes_path) do
+    classes_path
+    |> File.read!()
+    |> :json.decode()
+    |> Enum.with_index(fn class, idx -> {idx, class} end)
+    |> Enum.into(%{})
+  end
+
   @doc """
-  Returns the detect object found in the given image.
+  Returns the detect object rows found in the given image.
+  The return rows are in form of lists of six elements: `[cx, cy, w, h, prob, class_idx]`.
+
+  * `model`: loaded `YOLO.Model.t()`
+  * `image_nx`: Image tensor already resized for the model (ex. YoloV8n is `{640, 640, 3}`).
+
+  You can then pipe the `detect/3` output to:
+  * `
+  * `to_detected_objects/1` to convert the rows to `detected_object()` maps.
 
   """
   @spec detect(t(), Nx.Tensor.t(), Keyword.t()) :: [Model.detected_object()]
   def detect(%{model_impl: impl} = model, image_nx, opts \\ []) do
     opts = Keyword.merge(@default_detect_options, opts)
     image_nx = impl.preprocess(image_nx)
-    run(model, image_nx)
-    impl.postprocess(opts)
+
+    model
+    |> run(image_nx)
+    |> impl.postprocess(opts)
   end
 
   @doc """
