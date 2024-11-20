@@ -10,7 +10,7 @@ PT_MODEL_URL = f"https://github.com/ultralytics/assets/releases/download/v8.3.0/
 
 pt_file = f"yolov8{MODEL_SIZE}.pt"
 model_file = f"yolov8{MODEL_SIZE}.onnx"
-categories_file = "categories.json"
+classes_file = "classes.json"
 
 
 def download_pt_model(url, path):
@@ -33,6 +33,6 @@ model = YOLO(pt_file)
 model.export(format='onnx', imgsz=IMAGE_SIZE, opset=9)
 
 # Export the categories
-with open(categories_file, "w") as f:
+with open(classes_file, "w") as f:
   data = [model.names[idx] for idx in model.names]
   json.dump(data, f)
