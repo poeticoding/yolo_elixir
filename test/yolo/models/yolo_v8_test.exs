@@ -2,20 +2,9 @@ defmodule YOLO.Models.YoloV8Test do
   use ExUnit.Case
   alias YOLO.Models.YoloV8
 
-  import YOLO.Helpers
-
-  # @classes_path Path.join(["priv", "models", "yolov8_coco_classes.json"])
-
   @fixtures_path Path.join(["test", "fixtures"])
-  # {640, 640, 3}
-  @resized_image_path Path.join(@fixtures_path, "traffic640.jpg")
-  # {900, 600, 3}
-  @original_image_path Path.join(@fixtures_path, "traffic.jpg")
 
   setup_all _ctx do
-    resized_image = open_image_to_nx(@resized_image_path)
-    original_image = open_image_to_nx(@original_image_path)
-
     # model output used to test postprocess/2
     model_output =
       @fixtures_path
@@ -24,14 +13,13 @@ defmodule YOLO.Models.YoloV8Test do
       |> Nx.from_binary({:f, 32})
       |> Nx.reshape({84, 8400})
 
-    %{resized_image: resized_image, original_image: original_image, model_output: model_output}
+    %{model_output: model_output}
   end
 
   describe "preprocess/1" do
-    test "returns a `{1, 3, 640, 640}`", %{resized_image: image_nx} do
-      processed_image = YoloV8.preprocess(image_nx)
-      assert {640, 640, 3} == image_nx.shape
-      assert {1, 3, 640, 640} == processed_image.shape
+    test "returns a `{1, 3, 640, 640}`" do
+      image_nx = Nx.iota({640, 640, 3})
+      assert {1, 3, 640, 640} == YoloV8.preprocess(image_nx).shape
     end
 
     test "raises an exception if the expected image shape is wrong" do
