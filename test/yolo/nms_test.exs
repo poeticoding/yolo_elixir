@@ -6,7 +6,7 @@ defmodule YOLO.NMSTest do
   setup_all _ctx do
     nms_input =
       @fixtures_path
-      |> Path.join("traffic640_yolov8n_output.bin")
+      |> Path.join("traffic_yolov8n_output.bin")
       |> File.read!()
       |> Nx.from_binary({:f, 32})
       |> Nx.reshape({84, 8400})

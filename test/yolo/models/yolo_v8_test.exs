@@ -10,7 +10,7 @@ defmodule YOLO.Models.YoloV8Test do
   # {640, 640, 3}
   @resized_image_path Path.join(@fixtures_path, "traffic640.jpg")
   # {900, 600, 3}
-  @original_image_path Path.join(@fixtures_path, "traffic_original.jpg")
+  @original_image_path Path.join(@fixtures_path, "traffic.jpg")
 
   setup_all _ctx do
     resized_image = open_image_to_nx(@resized_image_path)
@@ -19,7 +19,7 @@ defmodule YOLO.Models.YoloV8Test do
     # model output used to test postprocess/2
     model_output =
       @fixtures_path
-      |> Path.join("traffic640_yolov8n_output.bin")
+      |> Path.join("traffic_yolov8n_output.bin")
       |> File.read!()
       |> Nx.from_binary({:f, 32})
       |> Nx.reshape({84, 8400})
@@ -53,11 +53,13 @@ defmodule YOLO.Models.YoloV8Test do
 
         # image is traffic640.jpg
         # 0 -> person
+        # 1 -> bicycle
         # 2 -> car
         # 5 -> bus
+        # 7 -> truck
         # 9 -> traffic light
         # 12 -> parking meter
-        assert round(class) in [0, 2, 5, 9, 12]
+        assert round(class) in [0, 1, 2, 5, 7, 9, 12]
       end
     end
   end
