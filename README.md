@@ -20,7 +20,7 @@ The library is built with the following objectives:
 
 
 ## IMPORTANT: ONNX model files!
-To run a YOLOv8 model, we typically need the neural network structure and the pre-trained weights obtained from training the model. While we could build the network using libraries like Axon (or Keras in Python), I've prefered to simplify the process by using a pre-existing PyTorch model from [Ultralytics](https://docs.ultralytics.com/models/yolov8/). Ultralytics developed and trained [YOLOv8 models](https://github.com/ultralytics/assets/releases/tag/v8.3.0), which are available under a GPL license. However, to avoid potential licensing conflicts with this library, I haven't included the ONNX model exports directly here. Instead, you need to convert the PyTorch .pt file into an ONNX format. No worries, I got you covered!
+To run a YOLOv8 model, we typically need the neural network structure and the pre-trained weights obtained from training the model. While we could build the network using libraries like Axon (or Keras in Python), I've preferred to simplify the process by using a pre-existing PyTorch model from [Ultralytics](https://docs.ultralytics.com/models/yolov8/). Ultralytics developed and trained [YOLOv8 models](https://github.com/ultralytics/assets/releases/tag/v8.3.0), which are available under a GPL license. However, to avoid potential licensing conflicts with this library, I haven't included the ONNX model exports directly here. Instead, you need to convert the PyTorch .pt file into an ONNX format. No worries, I got you covered!
 
 Ultralytics' YOLOv8 comes in several sizes: n (nano), s (small), m (medium), l (large), and x (extra-large). Larger models offer better performance in terms of classification accuracy and object detection but require more computational resources and memory.
 
@@ -339,7 +339,7 @@ The library is designed to be extensible through the `YOLO.Model` behaviour, all
 One of the next goals (listed in the TODO section below) is to support models with different input and output sizes. This update would allow the library to work with YOLO models trained on other datasets or even custom datasets, making it more flexible and useful.
 ## TODOs
 ### Improvements
-* [ ] Support dynamically different input and output shapes. (This is going to be foundamental to support different models with custom classes).
+* [ ] Support dynamically different input and output shapes. (This is going to be fundamental to support different models with custom classes).
 * [ ] Kino library to easily visualize detections
 
 ### Experiments
