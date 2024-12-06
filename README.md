@@ -50,7 +50,7 @@ The script will download the `.pt` model and generate two files:
 First install the library and configure Nx.
 ```elixir
 Mix.install([
-  {:yolo, "~> 0.1.0"},
+  {:yolo, ">= 0.0.0"},
 
   # I'm using EXLA as Nx backend on my MacBook Air M3
   {:exla, "~> 0.9.2"},
