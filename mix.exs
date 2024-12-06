@@ -37,7 +37,7 @@ defmodule YOLO.MixProject do
     [
       {:ortex, "~> 0.1.9"},
       {:nx, "~> 0.9"},
-      {:exla, ">=0.0.0", optional: true},
+      {:exla, "~> 0.9.2", optional: true},
       {:yolo_fast_nms, "~> 0.1.1", optional: true},
       {:evision, "~> 0.2.0", optional: true},
       {:image, "~> 0.54.4", optional: true},
