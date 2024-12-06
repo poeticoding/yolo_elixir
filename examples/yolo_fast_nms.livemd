@@ -1,0 +1,148 @@
+<!-- livebook:{"file_entries":[{"file":{"file_system_id":"local","file_system_type":"local","path":"/Users/alvise/code/yolo/test/fixtures/traffic.jpg"},"name":"traffic.jpg","type":"file"},{"file":{"file_system_id":"local","file_system_type":"local","path":"/Users/alvise/code/yolo/models/yolov8n.onnx"},"name":"yolov8n.onnx","type":"file"},{"file":{"file_system_id":"local","file_system_type":"local","path":"/Users/alvise/code/yolo/models/yolov8n_classes.json"},"name":"yolov8n_classes.json","type":"file"}],"persist_outputs":true} -->
+
+# Make it fast with YoloFastNMS
+
+```elixir
+Mix.install([
+  {:yolo, ">= 0.0.0"},
+  {:yolo_fast_nms, ">= 0.0.0"},
+  {:nx, "~> 0.9.1"},
+  {:exla, "~> 0.9.0"},
+  {:kino, "~> 0.14.0"},
+  {:evision, "~> 0.2"}
+],[
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+])
+```
+
+## Load image and model
+
+```elixir
+mat = Evision.imread(Kino.FS.file_path("traffic.jpg"))
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Evision.Mat{
+  channels: 3,
+  dims: 2,
+  type: {:u, 8},
+  raw_type: 16,
+  shape: {1080, 1920, 3},
+  ref: #Reference<0.1364157824.1534197778.893>
+}
+```
+
+```elixir
+model =
+  YOLO.load(
+    model_path: Kino.FS.file_path("yolov8n.onnx"),
+    classes_path: Kino.FS.file_path("yolov8n_classes.json")
+  )
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%YOLO.Model{
+  ref: #Ortex.Model<
+    inputs: [
+      {"images",
+       "Tensor {\n    ty: Float32,\n    dimensions: [\n        1,\n        3,\n        640,\n        640,\n    ],\n}",
+       [1, 3, 640, 640]}
+    ]
+    outputs: [
+      {"output0",
+       "Tensor {\n    ty: Float32,\n    dimensions: [\n        1,\n        84,\n        8400,\n    ],\n}",
+       [1, 84, 8400]}
+    ]>,
+  classes: %{
+    39 => "bottle",
+    74 => "clock",
+    59 => "bed",
+    69 => "oven",
+    67 => "cell phone",
+    45 => "bowl",
+    50 => "broccoli",
+    22 => "zebra",
+    51 => "carrot",
+    26 => "handbag",
+    63 => "laptop",
+    47 => "apple",
+    27 => "tie",
+    77 => "teddy bear",
+    0 => "person",
+    5 => "bus",
+    21 => "bear",
+    62 => "tv",
+    30 => "skis",
+    16 => "dog",
+    3 => "motorcycle",
+    53 => "pizza",
+    33 => "kite",
+    14 => "bird",
+    40 => "wine glass",
+    37 => "surfboard",
+    24 => "backpack",
+    17 => "horse",
+    48 => "sandwich",
+    73 => "book",
+    11 => "stop sign",
+    57 => "couch",
+    43 => "knife",
+    6 => "train",
+    20 => "elephant",
+    60 => "dining table",
+    28 => "suitcase",
+    25 => "umbrella",
+    1 => "bicycle",
+    58 => "potted plant",
+    32 => "sports ball",
+    76 => "scissors",
+    36 => "skateboard",
+    35 => "baseball glove",
+    15 => "cat",
+    78 => "hair drier",
+    64 => "mouse",
+    75 => "vase",
+    ...
+  },
+  model_impl: YOLO.Models.YoloV8,
+  shapes: %{input: {1, 3, 640, 640}, output: {1, 84, 8400}}
+}
+```
+
+## YOLO.NMS vs YoloFastNMS
+
+```elixir
+# YOLO.NMS
+{nx_nms_time, _result} = :timer.tc fn ->
+  YOLO.detect(model, mat)
+end
+
+# YOLO.NMS
+{fast_nms_time, _result} = :timer.tc fn ->
+  YOLO.detect(model, mat, nms_fun: &YoloFastNMS.run/3)
+end
+
+IO.puts("YOLO.NMS: #{trunc(nx_nms_time/1_000)}ms")
+IO.puts("YoloFastNMS: #{trunc(fast_nms_time/1_000)}ms")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+YOLO.NMS: 550ms
+YoloFastNMS: 37ms
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+<!-- livebook:{"offset":3259,"stamp":{"token":"XCP.pLpS1H6T6p4gnAG5PmQJYu0ou6lAipSPxWIePkZTQU2Y5HTezxj9419oQ9tkQDkBiw1RRuQ5uQ-aQxx5xBBtx_xydnwMJYRyHDr3vQ","version":2}} -->
