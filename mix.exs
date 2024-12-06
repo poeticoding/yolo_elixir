@@ -37,7 +37,7 @@ defmodule YOLO.MixProject do
     [
       {:ortex, "~> 0.1.9"},
       {:nx, "~> 0.9"},
-      {:exla, "~> 0.9.2", optional: true},
+      {:exla, "~> 0.9", optional: true},
       {:yolo_fast_nms, "~> 0.1.1", optional: true},
       {:evision, "~> 0.2.0", optional: true},
       {:image, "~> 0.54.4", optional: true},
@@ -51,7 +51,7 @@ defmodule YOLO.MixProject do
     [
       name: "yolo",
       maintainers: ["Alvise Susmel"],
-      files: ~w(mix.exs README.md lib),
+      files: ~w(mix.exs README.md LICENSE lib),
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url}
     ]
@@ -63,7 +63,7 @@ defmodule YOLO.MixProject do
 
   defp docs do
     [
-      main: "README",
+      main: "readme",
       source_ref: "v#{@version}",
       extras: extras(),
       assets: %{"guides/images" => "guides/images"}
