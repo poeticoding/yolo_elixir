@@ -98,6 +98,38 @@ This code returns a list of detected objects along with their bounding box coord
 ]
 ```
 
+### Using Nx.Serving
+```elixir
+Mix.install([
+  {:yolo, ">= 0.0.0"},
+  {:yolo_fast_nms, ">= 0.0.0"},
+  {:evision, "~> 0.2"},
+  {:image, "~> 0.37"},
+  {:exla, "~> 0.9.2"},
+  {:kino, "~> 0.14"},
+  {:torchx, "~> 0.9.2"}
+], config: [
+  nx: [default_backend: Torchx.Backend]
+])
+```
+
+```elixir
+Kino.start_child!({Registry, [keys: :unique, name: :model_registry]})
+
+Kino.start_child(
+  Yolo.Serving.Build.call(
+    MyServing, 
+    Path.join(__DIR__, "models/yolov8n.onnx"), 
+    Path.join(__DIR__, "models/yolov8n_classes.json"),
+    []
+  )
+)
+
+image_path
+|> Evision.imread()
+|> Yolo.Serving.Detect.call(MyServing, prob_threshold: 0.5, nms_fun: &YoloFastNMS.run/3)
+```
+
 ![traffic image](guides/images/traffic_detections.jpg)
 
 ## YoloV8x
