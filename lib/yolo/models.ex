@@ -42,7 +42,7 @@ defmodule YOLO.Models do
 
   ## Optional Options
   * `model_impl` - Module implementing the `YOLO.Model` behaviour (default: `YOLO.Models.YoloV8`)
-  * `eps` - List of execution providers to pass to Ortex (e.g. `[:coreml]`, `[:cuda]`), default: `[:cpu]`
+  * `eps` - List of execution providers to pass to Ortex (e.g. `[:coreml]`, `[:cuda]`, `[:tensorrt]`, `[:directml]`), default: `[:cpu]`
   * `json_decoder` - Function to decode JSON strings (default: `&:json.decode/1`)
 
   ## Returns
