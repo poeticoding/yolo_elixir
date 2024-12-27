@@ -20,8 +20,13 @@ defmodule YOLO.Models do
     YOLO.Models.detect(model, image, prob_threshold: 0.5)
     ```
   """
+  require Logger
 
-  @default_load_options [model_impl: YOLO.Models.YoloV8, json_decoder: &:json.decode/1]
+  @default_load_options [
+    model_impl: YOLO.Models.YoloV8,
+    eps: [:cpu],
+    json_decoder: &:json.decode/1
+  ]
   @default_detect_options [
     prob_threshold: 0.25,
     iou_threshold: 0.45,
@@ -37,6 +42,7 @@ defmodule YOLO.Models do
 
   ## Optional Options
   * `model_impl` - Module implementing the `YOLO.Model` behaviour (default: `YOLO.Models.YoloV8`)
+  * `eps` - List of execution providers to pass to Ortex (e.g. `[:coreml]`, `[:cuda]`), default: `[:cpu]`
   * `json_decoder` - Function to decode JSON strings (default: `&:json.decode/1`)
 
   ## Returns
@@ -60,9 +66,12 @@ defmodule YOLO.Models do
     model_impl = Keyword.fetch!(options, :model_impl)
     model_path = Keyword.fetch!(options, :model_path)
     classes_path = Keyword.fetch!(options, :classes_path)
+    eps = Keyword.fetch!(options, :eps)
     json_decoder = Keyword.fetch!(options, :json_decoder)
-    model_ref = Ortex.load(model_path)
+    model_ref = Ortex.load(model_path, eps)
     classes = load_classes(classes_path, json_decoder)
+
+    Logger.info("Loaded model #{model_path} with #{inspect(eps)} execution providers")
 
     %YOLO.Model{
       ref: model_ref,
