@@ -1,17 +1,13 @@
-# CUDA environment variables
-# ELIXIR_ERL_OPTIONS="+sssdio 128"
-# XLA_TARGET=cuda12
-# TF_CUDA_VERSION='12.6'
-# EXLA_TARGET=cuda XLA_FLAGS='--xla_gpu_cuda_data_dir=/usr/local/cuda-12.6'
-
+# --directml for Windows DirectML
 # --coreml for Mac CoreML
 # --cuda for CUDA
 # --tensorrt for TensorRT
 
 eps = case System.argv() do
-  ["--coreml"] -> [:coreml]
-  ["--cuda"] -> [:cuda]
-  ["--tensorrt"] -> [:tensorrt]
+  ["--eps", "directml"] -> [:directml]
+  ["--eps", "coreml"] -> [:coreml]
+  ["--eps", "cuda"] -> [:cuda]
+  ["--eps", "tensorrt"] -> [:tensorrt]
   _ -> [:cpu]
 end
 
