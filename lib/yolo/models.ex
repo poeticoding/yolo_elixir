@@ -12,7 +12,7 @@ defmodule YOLO.Models do
     ```elixir
     YOLO.Models.load(model_path: "path/to/model.onnx",
                     classes_path: "path/to/classes.json",
-                    model_impl: YOLO.Models.YoloV8)
+                    model_impl: YOLO.Models.Ultralytics)
     ```
 
   - `YOLO.Models.detect/3`: Runs object detection on an image
@@ -23,7 +23,7 @@ defmodule YOLO.Models do
   require Logger
 
   @default_load_options [
-    model_impl: YOLO.Models.YoloV8,
+    model_impl: YOLO.Models.Ultralytics,
     eps: [:cpu],
     json_decoder: &:json.decode/1
   ]
