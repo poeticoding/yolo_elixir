@@ -35,14 +35,21 @@ defmodule YOLO.MixProject do
 
   defp deps do
     [
-      {:ortex, "~> 0.1.9"},
+      # required
+      {:ortex, "~> 0.1.10"},
       {:nx, "~> 0.9"},
+
+      # optional
       {:exla, "~> 0.9", optional: true},
       {:yolo_fast_nms, "~> 0.1.1", optional: true},
       {:evision, "~> 0.2.0", optional: true},
       {:image, "~> 0.54.4", optional: true},
+
+      # code check and docs
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.35", only: :dev, runtime: false},
+
+      # benchmarking
       {:benchee, "~> 1.3.0", only: :benchee}
     ]
   end

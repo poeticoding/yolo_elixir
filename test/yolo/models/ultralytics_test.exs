@@ -1,6 +1,6 @@
-defmodule YOLO.Models.YoloV8Test do
+defmodule YOLO.Models.UltralyticsTest do
   use ExUnit.Case
-  alias YOLO.Models.YoloV8
+  alias YOLO.Models.Ultralytics
 
   @fixtures_path Path.join(["test", "fixtures"])
 
@@ -11,7 +11,7 @@ defmodule YOLO.Models.YoloV8Test do
         input: {1, 3, 640, 640},
         output: {1, 84, 8400}
       },
-      model_impl: YoloV8
+      model_impl: Ultralytics
     }
 
     # model output used to test postprocess/2
@@ -50,7 +50,10 @@ defmodule YOLO.Models.YoloV8Test do
 
     test "returns a `{1, 3, 640, 640}` tensor and scaling config", %{model: model} do
       image_nx = Nx.iota({640, 640, 3})
-      {output_nx, scaling_config} = YoloV8.preprocess(model, image_nx, frame_scaler: TestScaler)
+
+      {output_nx, scaling_config} =
+        Ultralytics.preprocess(model, image_nx, frame_scaler: TestScaler)
+
       assert {1, 3, 640, 640} == Nx.shape(output_nx)
       assert %YOLO.FrameScalers.ScalingConfig{} = scaling_config
     end
@@ -70,7 +73,7 @@ defmodule YOLO.Models.YoloV8Test do
       }
 
       detected_objects =
-        YoloV8.postprocess(model, model_output, scaling_config,
+        Ultralytics.postprocess(model, model_output, scaling_config,
           prob_threshold: 0.25,
           iou_threshold: 0.45
         )
