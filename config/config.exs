@@ -1,6 +1,6 @@
 import Config
 
-config :nx, default_backend: {EXLA.Backend, client: :cpu}, default_defn_options: [compiler: EXLA]
+config :nx, default_backend: {EXLA.Backend, client: :host}, default_defn_options: [compiler: EXLA]
 
 # CoreML acceleration for Mac
 ortex_features =
