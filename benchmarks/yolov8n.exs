@@ -1,8 +1,3 @@
-# --directml for Windows DirectML
-# --coreml for Mac CoreML
-# --cuda for CUDA
-# --tensorrt for TensorRT
-
 eps = case System.argv() do
   ["--eps", "directml"] -> [:directml]
   ["--eps", "coreml"] -> [:coreml]
@@ -10,8 +5,6 @@ eps = case System.argv() do
   ["--eps", "tensorrt"] -> [:tensorrt]
   _ -> [:cpu]
 end
-
-Nx.global_default_backend(EXLA.Backend)
 
 images = [
   "dog", "eagle", "giraffe", "horses", "kite", "person", "scream", "traffic"
