@@ -48,26 +48,46 @@ The script will download the `.pt` model and generate two files:
 ## Getting Started
 
 First install the library and configure Nx.
+
+### `mix.exs`
+
 ```elixir
-Mix.install([
+defp deps do
   {:yolo, ">= 0.0.0"},
 
   # I'm using EXLA as Nx backend on my MacBook Air M3
+  # Nx is mostly used for pre/post processing
   {:exla, "~> 0.9.2"},
   # evision for image processing (you can use :image instead)
   {:evision, "~> 0.2.0"}
-]
-], config: [
-  nx: [default_backend: EXLA.Backend]
-])
+end
 ```
+
+### `config.exs`
+Enable hardware acceleration in Ortex based on platform (CoreML on Mac, DirectML on Windows, CUDA/TensorRT on Linux)
+```elixir
+# Mac with CoreML
+config :ortex, Ortex.Native, features: [:coreml]
+
+# Windows machine, DirectML
+config :ortex, Ortex.Native, features: [:directml]
+
+#CUDA/TensorRT
+config :ortex, Ortex.Native, features: [:cuda, :tensorrt]
+```
+
+### Load the model
 
 Then you need just a few lines of code to get a list of objects detected in the image.
 
 ```elixir  
 model = YOLO.load([
   model_path: "models/yolov8n.onnx", 
-  classes_path: "models/yolov8n_classes.json"
+  classes_path: "models/yolov8n_classes.json",
+
+  # Ortex execution providers (same as the `:ortex` config)
+  # Mac with CoreML
+  eps: [:coreml] # or [:directml] or [:cuda, :tensorrt], default: [:cpu]
 ])
 
 mat = Evision.imread(image_path)
@@ -140,40 +160,49 @@ YOLO.detect(model, mat, nms_fun: &YoloFastNMS.run/3)
 ```
 
 ## Benchmarks
-Benchmarks below are run on a MacBook Air M3 with EXLA as Nx backend.
+Below you find some YoloV8 benchmarks of **full pipeline** (preprocess, run, postprocess with NMS). Thanks to FastNMS NIF, pre and postprocessing speeds in Elixir YOLO are comparable to Python Ultralytics. The main performance difference between the two implementations comes from inference speed, where Elixir YOLO uses Ortex (Ort rust Library) for model execution.
+You can run benchmarks yourself on your machine with
 
-```text
-Operating System: macOS
-CPU Information: Apple M3
-Number of Available Cores: 8
-Available memory: 16 GB
-Elixir 1.17.2
-Erlang 27.1.2
-JIT enabled: true
+```bash
+MIX_ENV=bench mix run benchmarks/yolov8n.exs --eps cpu
 ```
-### `detect/3` with `YoloFastNMS` vs Ultralytics 
-[benchmarks/yolov8n.exs](benchmarks/yolov8n.exs)
-```text
-Name                            ips        average  deviation         median         99th %
-detect/3 with FastNMS         26.09       38.32 ms     ±4.43%       38.09 ms       48.83 ms
+and you can pass the `--eps` flag to specify the execution providers (`coreml`, `directml`, `cuda`, `tensorrt`)
 
-Memory usage statistics:
 
-Name                          average  deviation         median         99th %
-detect/3 with FastNMS        48.42 KB     ±5.92%       47.25 KB       56.06 KB
+| MacBook Air M3  | Library   | N  |   S   | X
+| ---     | ---  | --- | --- | ---
+| CPU     | **Elixir YOLO**  | 37ms | 93ms | 714ms
+| CPU     | Python Ultralytics |  28ms | 74ms | 250ms
+| CoreML  | **Elixir YOLO**  | 19ms | 25ms | 65ms
+| MPS     | Python Ultralytics | 19ms | 24ms | 71ms
+
+For some reason Ultralytics with MPS backend has postprocessing really slow (~8ms with N model and 25ms with X model)
+
+
+
+On my Ubuntu 24.04 Linux PC with RTX 4090, CUDA 12.6, I needed to set these environment variables, consider that the paths and versions in your computer might be different.
+
+```bash
+# CUDA environment variables
+ELIXIR_ERL_OPTIONS="+sssdio 128"
+XLA_TARGET=cuda12
+TF_CUDA_VERSION='12.6'
+EXLA_TARGET=cuda 
+XLA_FLAGS='--xla_gpu_cuda_data_dir=/usr/local/cuda-12.6'
 ```
 
-[benchmarks/yolov8n_cpu.py](benchmarks/yolov8n_cpu.py)
 
-```text
-0: 384x640 17 persons, 3 bicycles, 6 cars, 1 truck, 2 traffic lights, 39.0ms
-Speed: 1.2ms preprocess, 39.0ms inference, 0.3ms postprocess per image at shape (1, 3, 384, 640)
-```
+| i9-13900K + RTX 4090  | Library   | N  |   S   | X
+| ---     | ---  | --- | --- | ---
+| CUDA     | Python Ultralytics | 2.8ms | 2.6ms  | 7.3ms
+| CUDA    | **Elixir YOLO**  | 10ms | 11ms | 16ms
 
 
 
 ### `YOLO.NMS` vs `YoloFastNMS`
 [benchmarks/nms.exs](benchmarks/nms.exs)
+
+Reason why, if you want to run YOLO in real-time, you need to use `YoloFastNMS`.
 ```text
 Name                  ips        average  deviation         median         99th %
 YoloFastNMS        528.63        1.89 ms     ±0.56%        1.89 ms        1.93 ms
@@ -192,6 +221,8 @@ YOLO.NMS          810.22 MB - 124497.68x memory usage +810.21 MB
 
 ### `preprocess/3`, `run/2`, `postprocess/4`
 [benchmarks/yolov8n_pipeline.exs](benchmarks/yolov8n_pipeline.exs)
+
+On a MacBook Air M3 with CoreML execution provider:
 ```text
 Name                          ips        average  deviation         median         99th %
 preprocess                 467.31        2.14 ms    ±11.15%        2.12 ms        2.76 ms
@@ -216,6 +247,39 @@ postprocess FastNMS         2.02 KB - 0.05x memory usage -41.76387 KB
 run                         1.18 KB - 0.03x memory usage -42.60156 KB
 ```
 
+On i9-13900K + RTX 4090 with CUDA execution provider:
+
+```text
+Operating System: Linux
+CPU Information: 13th Gen Intel(R) Core(TM) i9-13900K
+Number of Available Cores: 32
+Available memory: 62.51 GB
+Elixir 1.16.2
+Erlang 26.2.5
+JIT enabled: true
+
+Name                          ips        average  deviation         median         99th %
+preprocess                 962.58        1.04 ms    ±31.26%        0.90 ms        1.88 ms
+postprocess FastNMS        555.80        1.80 ms    ±17.49%        1.69 ms        3.25 ms
+run                        132.19        7.56 ms    ±12.47%        7.30 ms       12.55 ms
+
+Comparison:
+preprocess                 962.58
+postprocess FastNMS        555.80 - 1.73x slower +0.76 ms
+run                        132.19 - 7.28x slower +6.53 ms
+
+Memory usage statistics:
+
+Name                        average  deviation         median         99th %
+preprocess                 46.84 KB     ±0.00%       46.84 KB       46.84 KB
+postprocess FastNMS         2.27 KB    ±92.36%        1.54 KB        6.54 KB
+run                         1.23 KB     ±0.00%        1.23 KB        1.23 KB
+
+Comparison:
+preprocess                 46.84 KB
+postprocess FastNMS         2.27 KB - 0.05x memory usage -44.57674 KB
+run                         1.23 KB - 0.03x memory usage -45.61719 KB
+```
 
 ## Livebook Examples
 
@@ -229,7 +293,7 @@ run                         1.18 KB - 0.03x memory usage -42.60156 KB
 Let's see how `YOLO.detect/3` works.
 
 ### Load YoloV8n Model
-Loads the *YoloV8n* model using the `model_path` and `classes_path`. Optionally, specify `model_impl`, which defaults to `YOLO.Models.YoloV8`.
+Loads the *YoloV8n* model using the `model_path` and `classes_path`. Optionally, specify `model_impl`, which defaults to `YOLO.Models.Ultralytics`.
 
 ```elixir
 model = YOLO.load([
@@ -243,7 +307,7 @@ model = YOLO.load([
 ```elixir
 mat = Evision.imread(image_path)
 
-{input_tensor, scaling_config} = YOLO.Models.YoloV8.preprocess(model, mat, [frame_scaler: YOLO.FrameScalers.EvisionScaler])
+{input_tensor, scaling_config} = YOLO.Models.Ultralytics.preprocess(model, mat, [frame_scaler: YOLO.FrameScalers.EvisionScaler])
 ```
 
 Before running object detection, the input image needs to be preprocessed to match the model's expected input format. The preprocessing steps are:
@@ -279,7 +343,7 @@ You can also adjust detection thresholds (`iou_threshold` and `prob_threshold`, 
 
 ### Postprocessing
 ```elixir
-result_rows = YOLO.Models.YoloV8.postprocess(model, output_tensor, scaling_config, opts)
+result_rows = YOLO.Models.Ultralytics.postprocess(model, output_tensor, scaling_config, opts)
 ```
 where `result_rows` is a list of lists, where each inner list represents a detected object with 6 elements:
 
@@ -337,13 +401,14 @@ The library is designed to be extensible through the `YOLO.Model` behaviour, all
 
 ## Future Plans  
 One of the next goals (listed in the TODO section below) is to support models with different input and output sizes. This update would allow the library to work with YOLO models trained on other datasets or even custom datasets, making it more flexible and useful.
+
 ## TODOs
 ### Improvements
 * [ ] Support dynamically different input and output shapes. (This is going to be fundamental to support different models with custom classes).
 * [ ] Kino library to easily visualize detections
 
 ### Experiments
-* [ ] CUDA benchmarks
+* [X] CUDA benchmarks
 * [ ] Object tracking
 * [ ] Run it on Nerves Rpi5
 * [ ] Run it on Jetson

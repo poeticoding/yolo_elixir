@@ -10,7 +10,12 @@ max_time = -1
 
 # warmup
 for i in range(1, 10):
-  model(["benchmarks/images/traffic.jpg"])
+  model(["benchmarks/images/traffic.jpg"], device='cpu')
+  # Mac
+  # model(["benchmarks/images/traffic.jpg"], device='mps')
+  
+  # CUDA
+  # model(["benchmarks/images/traffic.jpg"], device='cuda')
 
 for i in range(1, 10):
   start = time.time()
