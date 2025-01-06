@@ -4,6 +4,9 @@ defmodule YOLO.Models.Yolox do
   and postprocessing detections using non-maximum suppression (NMS).
 
   Supports YOLOX models found at [https://github.com/Megvii-BaseDetection/YOLOX](github.com/Megvii-BaseDetection/YOLOX)
+
+  If using a YOLOX model that was exported with `--decode_in_inference`, you can set
+  `decode_head: false` in the YOLO.detect/3 options.
   """
 
   @behaviour YOLO.Model
@@ -38,21 +41,41 @@ defmodule YOLO.Models.Yolox do
     %{grids: grids, expanded_strides: expanded_strides}
   end
 
+  @doc """
+  Post-processes the model's raw output to produce a filtered list of detected objects.
+
+  Options:
+  * `decode_head` - If true, decode the output head to map predictions to input image space.
+    Defaults to true. Can be set to false if using a YOLOX model that was exported with `--decode_in_inference`
+  * `nms_fun` - Optional custom NMS function. Must calculate detection scores as the product of the maximum class
+    probability and the objectness score.
+  * `prob_threshold` - Minimum probability threshold for detections
+  * `iou_threshold` - IoU threshold for non-maximum suppression
+  """
   @impl true
   def postprocess(%{precalculated: precalculated}, model_output, scaling_config, opts) do
     prob_threshold = Keyword.fetch!(opts, :prob_threshold)
     iou_threshold = Keyword.fetch!(opts, :iou_threshold)
     nms_fun = Keyword.get(opts, :nms_fun, &default_nms/3)
+    decode_head? = Keyword.get(opts, :decode_head, true)
 
     %{grids: grids, expanded_strides: expanded_strides} = precalculated
 
     model_output
-    |> process_bboxes(grids, expanded_strides)
+    |> maybe_decode_head(grids, expanded_strides, decode_head?)
     |> nms_fun.(prob_threshold, iou_threshold)
     |> YOLO.FrameScalers.scale_bboxes_to_original(scaling_config)
   end
 
-  # YOLOX uses convolutions, so to decode the output, we have to
+  defp maybe_decode_head(model_output, grids, expanded_strides, true = _decode_head?) do
+    process_bboxes(model_output, grids, expanded_strides)
+  end
+
+  defp maybe_decode_head(model_output, _grids, _expanded_strides, false = _decode_head?) do
+    Nx.reshape(model_output, {8400, 85})
+  end
+
+  # YOLOX uses convolutions, so if the exported model doesn't include decoding in inference, we have to
   # apply strides to map predictions to input image space.
   # Translated from https://github.com/Megvii-BaseDetection/YOLOX/blob/d872c71bf63e1906ef7b7bb5a9d7a529c7a59e6a/yolox/utils/demo_utils.py#L139
   # Generation of grids and expanded strides is split out into `generate_grids_and_expanded_strides`
@@ -179,6 +202,7 @@ defmodule YOLO.Models.Yolox do
     |> calculate_max_prob_score_per_prediction()
     |> Nx.to_list()
     |> Stream.filter(fn [_cx, _cy, _w, _h, prob, _class] -> prob >= prob_threshold end)
+    |> Enum.sort_by(fn [_cx, _cy, _w, _h, prob, _class] -> prob end, :desc)
     |> YOLO.NMS.nms(nms_threshold)
   end
 end
