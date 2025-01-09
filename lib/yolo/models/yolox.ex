@@ -72,7 +72,8 @@ defmodule YOLO.Models.Yolox do
   end
 
   defp maybe_decode_head(model_output, _grids, _expanded_strides, false = _decode_head?) do
-    Nx.reshape(model_output, {8400, 85})
+    # {1, n, 85} -> {n, 85}
+    Nx.squeeze(model_output)
   end
 
   # YOLOX uses convolutions, so if the exported model doesn't include decoding in inference, we have to
