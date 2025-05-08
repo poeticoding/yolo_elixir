@@ -9,6 +9,11 @@ defmodule YOLO.Models.Ultralytics do
   @behaviour YOLO.Model
   alias YOLO.FrameScalers.ScalingConfig
 
+  @impl true
+  def init(model, _options) do
+    model
+  end
+
   @doc """
   Preprocesses an input image to match the model's required format.
 
@@ -102,9 +107,6 @@ defmodule YOLO.Models.Ultralytics do
     |> nms_fun.(prob_threshold, iou_threshold)
     |> YOLO.FrameScalers.scale_bboxes_to_original(scaling_config)
   end
-
-  @impl true
-  def precalculate(_model_ref, _shapes, _options), do: nil
 
   defp default_nms(model_output_nx, prob_threshold, iou_threshold) do
     model_output_nx

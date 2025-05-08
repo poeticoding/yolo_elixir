@@ -20,6 +20,9 @@ defmodule YOLO.Model do
     - Returns list of detected objects as `[cx, cy, w, h, prob, class_idx]`
     - Handles tasks like non-maximum suppression and coordinate scaling
 
+  ## Optional Callbacks
+
+  - `init/1`: Initializes the model. This is called when the model is loaded. It's the place where you can, for example, generate and store in `model_data` things like grids and expanded strides that will be used later in other callbacks.
 
   ## Types
 
@@ -28,7 +31,7 @@ defmodule YOLO.Model do
     - `:model_impl` - Module implementing this behaviour
     - `:shapes` - Input/output tensor shapes
     - `:classes` - Map of class indices to labels
-    - `:precalculated` - Model-specific precalculated values for faster inference
+    - `:model_data` - Model-specific data, e.g. grids and expanded strides for YOLOX
 
   - `detected_object()`: Map containing detection results:
     - `:bbox` - Bounding box coordinates (cx, cy, w, h)
@@ -37,7 +40,7 @@ defmodule YOLO.Model do
     - `:prob` - Detection probability
   """
   @enforce_keys [:ref, :model_impl, :shapes]
-  defstruct [:ref, :classes, :model_impl, :shapes, :precalculated]
+  defstruct [:ref, :classes, :model_impl, :shapes, :model_data]
 
   @type classes :: %{integer() => String.t()}
 
@@ -47,7 +50,7 @@ defmodule YOLO.Model do
           # module implementing the behaviour
           model_impl: module(),
           classes: classes(),
-          precalculated: term()
+          model_data: term()
         }
 
   @type shape :: {integer(), integer()}
@@ -62,6 +65,18 @@ defmodule YOLO.Model do
           # detection probability
           prob: float()
         }
+
+  @doc """
+  Initialize the model. This is called when the model is loaded. It's the place where you can, for example, generate and store in `model_data` things like grids and expanded strides that will be used later in other callbacks.
+
+  ## Parameters
+    * `model`
+    * `options` : options passed to YOLO.load/2
+
+  ## Returns
+    * The updated `YOLO.Model` struct
+  """
+  @callback init(model :: t(), options :: Keyword.t()) :: t()
 
   @doc """
   Prepares input image tensors for the model.
@@ -119,6 +134,4 @@ defmodule YOLO.Model do
             ) :: [
               [float()]
             ]
-
-  @callback precalculate(model_ref :: term(), shapes :: %{(:input | :output) => tuple()}, options :: Keyword.t()) :: term()
 end
