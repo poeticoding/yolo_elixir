@@ -3,8 +3,9 @@ defmodule YOLO.Models.YOLOXTest do
   At the moment, `postprocess/4` is indirectly covered in the integration tests
   """
   use ExUnit.Case
-  alias YOLO.Models.YOLOX
+
   alias YOLO.FrameScalers.ScalingConfig
+  alias YOLO.Models.YOLOX
 
   describe "init/2" do
     setup do
