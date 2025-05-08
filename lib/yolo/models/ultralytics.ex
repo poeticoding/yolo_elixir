@@ -103,6 +103,9 @@ defmodule YOLO.Models.Ultralytics do
     |> YOLO.FrameScalers.scale_bboxes_to_original(scaling_config)
   end
 
+  @impl true
+  def precalculate(_model_ref, _shapes, _options), do: nil
+
   defp default_nms(model_output_nx, prob_threshold, iou_threshold) do
     model_output_nx
     |> postprocess_transpose()
