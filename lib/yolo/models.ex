@@ -1,8 +1,10 @@
 defmodule YOLO.Models do
   @moduledoc """
   This module handles loading YOLO models and running object detection on images.
-
   The `YOLO.Model` behaviour can be implemented for various YOLO variants.
+  The supported models are:
+  - `YOLO.Models.YOLOX`: Implements the YOLOX object detection model (https://github.com/Megvii-BaseDetection/YOLOX).
+  - `YOLO.Models.Ultralytics`: Implements models from the Ultralytics YOLO family (https://www.ultralytics.com).
 
   ## Main Functions
 
