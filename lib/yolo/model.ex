@@ -28,6 +28,7 @@ defmodule YOLO.Model do
     - `:model_impl` - Module implementing this behaviour
     - `:shapes` - Input/output tensor shapes
     - `:classes` - Map of class indices to labels
+    - `:precalculated` - Model-specific precalculated values for faster inference
 
   - `detected_object()`: Map containing detection results:
     - `:bbox` - Bounding box coordinates (cx, cy, w, h)
@@ -36,7 +37,7 @@ defmodule YOLO.Model do
     - `:prob` - Detection probability
   """
   @enforce_keys [:ref, :model_impl, :shapes]
-  defstruct [:ref, :classes, :model_impl, :shapes]
+  defstruct [:ref, :classes, :model_impl, :shapes, :precalculated]
 
   @type classes :: %{integer() => String.t()}
 
@@ -45,7 +46,8 @@ defmodule YOLO.Model do
           shapes: %{(:input | :output) => tuple()},
           # module implementing the behaviour
           model_impl: module(),
-          classes: classes()
+          classes: classes(),
+          precalculated: term()
         }
 
   @type shape :: {integer(), integer()}
@@ -117,4 +119,6 @@ defmodule YOLO.Model do
             ) :: [
               [float()]
             ]
+
+  @callback precalculate(model_ref :: term(), shapes :: %{(:input | :output) => tuple()}, options :: Keyword.t()) :: term()
 end

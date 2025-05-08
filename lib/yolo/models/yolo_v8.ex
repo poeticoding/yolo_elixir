@@ -10,4 +10,7 @@ defmodule YOLO.Models.YoloV8 do
 
   @deprecated "Use YOLO.Models.Ultralytics.postprocess/4 instead"
   defdelegate postprocess(model, model_output, scaling_config, opts), to: Ultralytics
+
+  @deprecated "Use YOLO.Models.Ultralytics.precalculate/3 instead"
+  defdelegate precalculate(model_ref, shapes, options), to: Ultralytics
 end

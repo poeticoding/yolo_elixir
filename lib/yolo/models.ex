@@ -70,14 +70,18 @@ defmodule YOLO.Models do
     json_decoder = Keyword.fetch!(options, :json_decoder)
     model_ref = Ortex.load(model_path, eps)
     classes = load_classes(classes_path, json_decoder)
+    shapes = model_shapes(model_ref)
 
     Logger.info("Loaded model #{model_path} with #{inspect(eps)} execution providers")
+
+    precalculated = model_impl.precalculate(model_ref, shapes, options)
 
     %YOLO.Model{
       ref: model_ref,
       classes: classes,
       model_impl: model_impl,
-      shapes: model_shapes(model_ref)
+      shapes: shapes,
+      precalculated: precalculated
     }
   end
 
