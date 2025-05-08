@@ -1,4 +1,5 @@
 defmodule YOLO do
+  @moduledoc false
   defdelegate load(options), to: YOLO.Models
   defdelegate detect(model, image), to: YOLO.Models
   defdelegate detect(model, image, options), to: YOLO.Models
