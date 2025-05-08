@@ -9,7 +9,7 @@ on:
   push:
     branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches-ignore: ["main"]
 
 permissions:
   contents: read
@@ -37,3 +37,5 @@ jobs:
       run: mix deps.get
     - name: Run tests
       run: mix test
+    - name: Check style (credo)
+      run: mix credo --strict
