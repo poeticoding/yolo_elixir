@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Image) do
   defmodule YOLO.FrameScalers.ImageScaler do
+    @moduledoc """
+    Implementation of the YOLO.FrameScaler behaviour for Vix.Vips.Image objects (`:image` library).
+    """
     @behaviour YOLO.FrameScaler
 
     @impl true

@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Evision) do
   defmodule YOLO.FrameScalers.EvisionScaler do
+    @moduledoc """
+    Implementation of the `YOLO.FrameScaler` behaviour for `Evision.Mat` objects (`:evision` library).
+    """
     @behaviour YOLO.FrameScaler
 
     @impl true
