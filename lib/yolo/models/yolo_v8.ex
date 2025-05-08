@@ -4,6 +4,8 @@ defmodule YOLO.Models.YoloV8 do
   This module is deprecated and will be removed in the future.
   """
   alias YOLO.Models.Ultralytics
+  @deprecated "Use YOLO.Models.Ultralytics.init/2 instead"
+  defdelegate init(model, options), to: Ultralytics
 
   @deprecated "Use YOLO.Models.Ultralytics.preprocess/3 instead"
   defdelegate preprocess(model, image, options), to: Ultralytics

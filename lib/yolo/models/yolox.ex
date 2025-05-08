@@ -1,18 +1,34 @@
-defmodule YOLO.Models.Yolox do
+defmodule YOLO.Models.YOLOX do
   @moduledoc """
-  YOLOX model implementation for preprocessing input images
-  and postprocessing detections using non-maximum suppression (NMS).
+  YOLOX model implementation for preprocessing input images and postprocessing detections using non-maximum suppression (NMS).
 
   Supports YOLOX models found at [https://github.com/Megvii-BaseDetection/YOLOX](github.com/Megvii-BaseDetection/YOLOX)
 
   If using a YOLOX model that was exported with `--decode_in_inference`, you can set
   `decode_head: false` in the YOLO.detect/3 options.
+
+  YOLOX-Tiny and YOLOX-Nano models use 416x416, while other models use 640x640.
   """
 
   @behaviour YOLO.Model
 
   import Nx.Defn
 
+  @impl true
+  def init(model, options) do
+    {_, _, height, width} = model.shapes.input
+
+    {grids, expanded_strides} =
+      generate_grids_and_expanded_strides({width, height}, options[:p6] || false)
+
+    %{model | model_data: %{grids: grids, expanded_strides: expanded_strides}}
+  end
+
+  @doc """
+  YOLOX input doesn't need to be normalized, so we resize and convert the image to a `{batch_size, channels, height, width}` tensor.
+
+  Tiny and Nano models use 416x416, while other models use 640x640.
+  """
   @impl true
   @spec preprocess(YOLO.Model.t(), term(), Keyword.t()) :: {Nx.Tensor.t(), ScalingConfig}
   def preprocess(model, image, options) do
@@ -31,35 +47,25 @@ defmodule YOLO.Models.Yolox do
     {image_nx, image_scaling}
   end
 
-  @impl true
-  def precalculate(_model_ref, shapes, options) do
-    {_, _, height, width} = shapes.input
-
-    {grids, expanded_strides} =
-      generate_grids_and_expanded_strides({width, height}, options[:p6] || false)
-
-    %{grids: grids, expanded_strides: expanded_strides}
-  end
-
   @doc """
   Post-processes the model's raw output to produce a filtered list of detected objects.
 
   Options:
   * `decode_head` - If true, decode the output head to map predictions to input image space.
-    Defaults to true. Can be set to false if using a YOLOX model that was exported with `--decode_in_inference`
+    Defaults to `true`. Can be set to `false` if using a YOLOX model that was exported with `--decode_in_inference`
   * `nms_fun` - Optional custom NMS function. Must calculate detection scores as the product of the maximum class
     probability and the objectness score.
   * `prob_threshold` - Minimum probability threshold for detections
   * `iou_threshold` - IoU threshold for non-maximum suppression
   """
   @impl true
-  def postprocess(%{precalculated: precalculated}, model_output, scaling_config, opts) do
+  def postprocess(model, model_output, scaling_config, opts) do
     prob_threshold = Keyword.fetch!(opts, :prob_threshold)
     iou_threshold = Keyword.fetch!(opts, :iou_threshold)
     nms_fun = Keyword.get(opts, :nms_fun, &default_nms/3)
     decode_head? = Keyword.get(opts, :decode_head, true)
 
-    %{grids: grids, expanded_strides: expanded_strides} = precalculated
+    %{grids: grids, expanded_strides: expanded_strides} = model.model_data
 
     model_output
     |> maybe_decode_head(grids, expanded_strides, decode_head?)
