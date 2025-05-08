@@ -346,7 +346,7 @@ defmodule YOLO.Models.YOLOXTest do
 
     test "bboxes detected in 40x40 grid", %{model: model, scaling_config: scaling_config} do
       # stride = 640/40 = 16px
-      detection_idx = 80*80 + 40 * 20 + 20
+      detection_idx = 80 * 80 + 40 * 20 + 20
 
       model_output =
         Nx.broadcast(0, {1, 8400, 85})
@@ -369,7 +369,7 @@ defmodule YOLO.Models.YOLOXTest do
 
     test "bboxes detected in 20x20 grid", %{model: model, scaling_config: scaling_config} do
       # stride = 640/20 = 32px
-      detection_idx = 80*80 + 40*40 + 20 * 10 + 10
+      detection_idx = 80 * 80 + 40 * 40 + 20 * 10 + 10
 
       model_output =
         Nx.broadcast(0, {1, 8400, 85})
