@@ -9,6 +9,11 @@ defmodule YOLO.Models.Ultralytics do
   @behaviour YOLO.Model
   alias YOLO.FrameScalers.ScalingConfig
 
+  @impl true
+  def init(model, _options) do
+    model
+  end
+
   @doc """
   Preprocesses an input image to match the model's required format.
 
