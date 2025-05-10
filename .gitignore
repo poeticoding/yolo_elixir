@@ -31,3 +31,4 @@ yolo-*.tar
 /priv/models/*.onnx
 /priv/models/*.pt
 /models/
+/python/models
