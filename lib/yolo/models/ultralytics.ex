@@ -7,6 +7,9 @@ defmodule YOLO.Models.Ultralytics do
   """
 
   @behaviour YOLO.Model
+
+  import Nx.Defn
+
   alias YOLO.FrameScalers.ScalingConfig
 
   @impl true
@@ -41,25 +44,26 @@ defmodule YOLO.Models.Ultralytics do
     {_, _channels, height, width} = model.shapes.input
     {image_nx, image_scaling} = YOLO.FrameScalers.fit(image, {height, width}, frame_scaler)
 
-    # image_nx
-    # axis 0 is height
-    # axis 1 is width
-    # axis 2 is rgb channels
-
-    input_nx =
-      image_nx
-
-      # RGB to BGR
-      |> Nx.reverse(axes: [2])
-      |> Nx.as_type({:f, 32})
-      # normalizing (values between 0 and 1)
-      |> Nx.divide(255)
-      # transpose to a `{3, 640, 640}`
-      |> Nx.transpose(axes: [2, 0, 1])
-      # add another axis {3, 640, 640} -> {1, 3, 640, 640}
-      |> Nx.new_axis(0)
+    input_nx = do_preprocess(image_nx)
 
     {input_nx, image_scaling}
+  end
+
+  # image_nx
+  # axis 0 is height
+  # axis 1 is width
+  # axis 2 is rgb channels
+  defnp do_preprocess(image_nx) do
+    image_nx
+    # RGB to BGR
+    |> Nx.reverse(axes: [2])
+    |> Nx.as_type({:f, 32})
+    # normalizing (values between 0 and 1)
+    |> Nx.divide(255)
+    # transpose to a `{3, 640, 640}`
+    |> Nx.transpose(axes: [2, 0, 1])
+    # add another axis {3, 640, 640} -> {1, 3, 640, 640}
+    |> Nx.new_axis(0)
   end
 
   @doc """
@@ -82,7 +86,7 @@ defmodule YOLO.Models.Ultralytics do
     * `opts` - Keyword list of options:
       * `prob_threshold` - Minimum probability threshold for detections
       * `iou_threshold` - IoU threshold for non-maximum suppression
-      * `nms_fun` - Optional custom NMS function (defaults to `YOLO.NMS.run/3`)
+      * `nms_fun` - Optional custom NMS function (defaults to `YOLO.NMS.run/4`)
 
   ## Returns
   List of detections where each detection is a list [cx, cy, w, h, prob, class_idx]:
@@ -101,27 +105,14 @@ defmodule YOLO.Models.Ultralytics do
   def postprocess(_model, model_output_nx, scaling_config, opts) do
     prob_threshold = Keyword.fetch!(opts, :prob_threshold)
     iou_threshold = Keyword.fetch!(opts, :iou_threshold)
-    nms_fun = Keyword.get(opts, :nms_fun, &default_nms/3)
+    nms_fun = Keyword.get(opts, :nms_fun, &default_nms/4)
 
     model_output_nx
-    |> nms_fun.(prob_threshold, iou_threshold)
+    |> nms_fun.(prob_threshold, iou_threshold, transpose?: true)
     |> YOLO.FrameScalers.scale_bboxes_to_original(scaling_config)
   end
 
-  @impl true
-  def precalculate(_model_ref, _shapes, _options), do: nil
-
-  defp default_nms(model_output_nx, prob_threshold, iou_threshold) do
-    model_output_nx
-    |> postprocess_transpose()
-    |> YOLO.NMS.run(prob_threshold, iou_threshold)
-  end
-
-  defp postprocess_transpose(output_nx) do
-    output_nx
-    # from {1, 84, 8400} to {84, 8400}
-    |> Nx.reshape({84, 8400})
-    # transpose, 8400 rows are the detected objects, 84 bbox and probs
-    |> Nx.transpose(axes: [1, 0])
+  defp default_nms(model_output_nx, prob_threshold, iou_threshold, options) do
+    YOLO.NMS.run(model_output_nx, prob_threshold, iou_threshold, options)
   end
 end
