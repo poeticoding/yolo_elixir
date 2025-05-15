@@ -23,46 +23,122 @@ defmodule YOLO.NMS do
 
   Returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`.
   """
-  @spec run(Nx.Tensor.t(), float(), float()) :: [[float()]]
-  def run(tensor, prob_threshold, iou_threshold) do
+
+  import Nx.Defn
+
+  @spec run(Nx.Tensor.t(), float(), float(), Keyword.t()) :: [[float()]]
+  def run(tensor, prob_threshold, iou_threshold, opts \\ []) do
     tensor
-    |> filter_predictions(prob_threshold)
+    |> filter_predictions(prob_threshold, Keyword.take(opts, [:transpose?]))
     # the results sorted desc by probability
     |> nms(iou_threshold)
   end
 
   @doc """
-  Filters detections, keeping only those with a probability higher than `:prob_threshold`.
+  Filters detections based on a confidence probability threshold.
 
-  The input `tensor` must have the shape `{8400, 84}` (transposed YOLOv8 output format).
+  Selects detections from `model_output` where the highest class confidence score exceeds `prob_threshold`.
 
-  Returns a list of `[bbox_cx, bbox_cy, bbox_w, bbox_h, prob, class_idx]`.
 
-  This implementation is inspired by Hans Elias B. Josephsen's talk (see the filter function at 12:06):
-  https://youtu.be/OsxGB6MbA8o?t=726
+  ## Arguments
+
+    * `model_output`: Input tensor. The standard expected shape is `{detections, bbox+classes}`
+      (e.g., `{8400, 84}`). The function can also handle inputs with a leading
+      batch dimension (e.g., `{1, 8400, 84}`), effectively squeezing internally.
+      If the input shape is `{bbox+classes, detections}` (e.g., `{84, 8400}`) or
+      `{1, bbox+classes, detections}` (e.g., `{1, 84, 8400}`), set
+      `transpose?: true` for internal transposition. The first 4 elements
+      of the `bbox+classes` dimension must be the bounding box coordinates.
+
+    * `prob_threshold`: Minimum confidence probability to keep a detection.
+
+    * `opts`: Keyword list options:
+      - `:transpose?` (boolean, default: `false`): If `true`, transpose the
+        input `model_output` before processing.
+
+  ## Returns
+
+  A list of detections `[cx, cy, w, h, prob, class_idx]`, sorted descending
+  by `prob`. Returns `[]` if no detections meet the threshold.
   """
-  @spec filter_predictions(Nx.Tensor.t(), float()) :: [[float()]]
-  def filter_predictions(tensor, prob_threshold) do
-    bboxes = Nx.slice(tensor, [0, 0], [8400, 4])
+  @spec filter_predictions(Nx.Tensor.t(), float(), Keyword.t()) :: [[float()]]
+  def filter_predictions(model_output, prob_threshold, opts \\ []) do
+    transpose? = Keyword.get(opts, :transpose?, false)
+
+    filtered_count =
+      model_output
+      |> count_confident_detections(prob_threshold: prob_threshold, transpose?: transpose?)
+      |> Nx.to_number()
+
+    if filtered_count == 0 do
+      []
+    else
+      model_output
+      |> build_top_detections_tensor(count: filtered_count, transpose?: transpose?)
+      |> Nx.to_list()
+    end
+  end
+
+  @spec maybe_squeeze_and_transpose(Nx.Tensor.t(), Keyword.t()) :: Nx.Tensor.t()
+  defnp maybe_squeeze_and_transpose(model_output, opts) do
+    model_output = if Nx.rank(model_output) == 3, do: Nx.squeeze(model_output), else: model_output
+    model_output = if opts[:transpose?], do: Nx.transpose(model_output), else: model_output
+    model_output
+  end
+
+  # filter_predictions/2: part 1
+  # count the number of detections with confidence above prob_threshold
+  @spec count_confident_detections(Nx.Tensor.t(), Keyword.t()) :: Nx.Tensor.t()
+  defnp count_confident_detections(model_output, opts) do
+    opts = keyword!(opts, [:prob_threshold, :transpose?])
+    prob_threshold = opts[:prob_threshold]
+
+    model_output = maybe_squeeze_and_transpose(model_output, opts)
+
     # focusing on the class predictions
-    probs = Nx.slice(tensor, [0, 4], [8400, 80])
+    probs = Nx.slice_along_axis(model_output, 4, Nx.axis_size(model_output, 1) - 4, axis: 1)
+    max_prob = Nx.reduce_max(probs, axes: [1])
+
+    max_prob
+    |> Nx.greater_equal(prob_threshold)
+    |> Nx.sum()
+  end
+
+  # filter_predictions/2: part 2
+  @spec build_top_detections_tensor(Nx.Tensor.t(), Keyword.t()) :: Nx.Tensor.t()
+  defnp build_top_detections_tensor(model_output, opts) do
+    opts = keyword!(opts, [:count, :transpose?])
+    filtered_count = opts[:count]
+
+    model_output = maybe_squeeze_and_transpose(model_output, opts)
+
+    {_dets_count, cols_count} = Nx.shape(model_output)
+    classes_count = cols_count - 4
+
+    # focusing on the class predictions
+    probs = Nx.slice_along_axis(model_output, 4, classes_count, axis: 1)
+
     # getting the max probability for each row (for each detected object)
     max_prob = Nx.reduce_max(probs, axes: [1])
-    # for each row (each detected object) get the class index with max prob
-    max_prob_class = Nx.argmax(probs, axis: 1)
 
-    # returning the indices of a descending ordered `max_prob` tensor
-    sorted_idx = Nx.argsort(max_prob, direction: :desc)
+    sorted_prob_indices = Nx.argsort(max_prob, direction: :desc)
+    filtered_indices = Nx.slice_along_axis(sorted_prob_indices, 0, filtered_count, axis: 0)
 
-    # concatenating the columns [cx, cy, w, h, prob, class] and getting the rows in sorted desc order
-    detected_objects =
-      Nx.concatenate([bboxes, Nx.new_axis(max_prob, 1), Nx.new_axis(max_prob_class, 1)], axis: 1)
-      |> Nx.take(sorted_idx)
+    filtered_rows = Nx.take(model_output, filtered_indices)
 
-    # taking only the rows above the given probability threshold
-    Enum.take_while(Nx.to_list(detected_objects), fn [_cx, _cy, _w, _h, prob, _class] ->
-      prob >= prob_threshold
-    end)
+    filtered_probs = Nx.take(max_prob, filtered_indices) |> Nx.new_axis(-1)
+
+    filtered_bboxes =
+      filtered_rows
+      |> Nx.slice_along_axis(0, 4, axis: 1)
+
+    filtered_class_ids =
+      probs
+      |> Nx.argmax(axis: 1)
+      |> Nx.take(filtered_indices)
+      |> Nx.new_axis(-1)
+
+    Nx.concatenate([filtered_bboxes, filtered_probs, filtered_class_ids], axis: 1)
   end
 
   @doc """
