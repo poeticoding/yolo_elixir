@@ -86,7 +86,7 @@ defmodule YOLO.Models.Ultralytics do
     * `opts` - Keyword list of options:
       * `prob_threshold` - Minimum probability threshold for detections
       * `iou_threshold` - IoU threshold for non-maximum suppression
-      * `nms_fun` - Optional custom NMS function (defaults to `YOLO.NMS.run/4`)
+      * `nms_fun` - Optional custom NMS function (defaults to `YOLO.NMS.run/2`)
 
   ## Returns
   List of detections where each detection is a list [cx, cy, w, h, prob, class_idx]:
@@ -105,14 +105,14 @@ defmodule YOLO.Models.Ultralytics do
   def postprocess(_model, model_output_nx, scaling_config, opts) do
     prob_threshold = Keyword.fetch!(opts, :prob_threshold)
     iou_threshold = Keyword.fetch!(opts, :iou_threshold)
-    nms_fun = Keyword.get(opts, :nms_fun, &default_nms/4)
+    nms_fun = Keyword.get(opts, :nms_fun, &default_nms/2)
 
     model_output_nx
-    |> nms_fun.(prob_threshold, iou_threshold, transpose?: true)
+    |> nms_fun.(prob_threshold: prob_threshold, iou_threshold: iou_threshold, transpose: true)
     |> YOLO.FrameScalers.scale_bboxes_to_original(scaling_config)
   end
 
-  defp default_nms(model_output_nx, prob_threshold, iou_threshold, options) do
-    YOLO.NMS.run(model_output_nx, prob_threshold, iou_threshold, options)
+  defp default_nms(model_output_nx, options) do
+    YOLO.NMS.run(model_output_nx, options)
   end
 end
