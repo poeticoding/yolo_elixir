@@ -15,14 +15,18 @@ The library is built with the following objectives:
    Designed to be straightforward and user-friendly, the library enables developers to load and detect objects with just two function calls.
 
 3. **Extensibility**  
-   Currently supporting YOLOv8 (in various model sizes such as `n`, `s`, ..., `x`), the library is built around a `YOLO.Model` behavior. It leverages ONNX and Ortex, making it adaptable for supporting other YOLO versions or custom models in the future.  
-
+   Supporting Ultralytics YOLO and YOLOX models (in various sizes), the library is built around a `YOLO.Model` behavior. It leverages ONNX and Ortex and the library is not limited to specific model architectures - it can handle any number of detection candidates and classes, making it perfect for custom-trained models.
 
 
 ## IMPORTANT: ONNX model files!
-To run a YOLOv8 model, we typically need the neural network structure and the pre-trained weights obtained from training the model. While we could build the network using libraries like Axon (or Keras in Python), I've preferred to simplify the process by using a pre-existing PyTorch model from [Ultralytics](https://docs.ultralytics.com/models/yolov8/). Ultralytics developed and trained [YOLOv8 models](https://github.com/ultralytics/assets/releases/tag/v8.3.0), which are available under a GPL license. However, to avoid potential licensing conflicts with this library, I haven't included the ONNX model exports directly here. Instead, you need to convert the PyTorch .pt file into an ONNX format. No worries, I got you covered!
 
-Ultralytics' YOLOv8 comes in several sizes: n (nano), s (small), m (medium), l (large), and x (extra-large). Larger models offer better performance in terms of classification accuracy and object detection but require more computational resources and memory.
+The library requires YOLO models in ONNX format, which combines both the neural network architecture and pre-trained weights. Currently, we support two model families:
+
+* **YOLOX**: Pre-converted ONNX models are available directly from the [YOLOX repository](https://github.com/Megvii-BaseDetection/YOLOX/tree/main/demo/ONNXRuntime)
+* **Ultralytics**: These models need to be converted from PyTorch (.pt) to ONNX format - https://github.com/ultralytics/assets/releases/tag/v8.3.0
+
+
+All these models come in different sizes, like *n (nano)*, *s (small)*, *m (medium)*, *l (large)*, and *x (extra-large)*. Larger models offer better performance in terms of classification accuracy and object detection but require more computational resources and memory.
 
 
 You can use the `python/yolov8_to_onnx.py` script found in the [GitHub repo](https://github.com/poeticoding/yolo_elixir).
@@ -47,13 +51,15 @@ The script will download the `.pt` model and generate two files:
 
 ## Getting Started
 
-First install the library and configure Nx.
+Here we'll demonstrate using an Ultralytics YOLO model. The library also supports YOLOX models, which can be used with the same API but may produce slightly different detection results due to their distinct architectures and training.
+
+First install the library and configure `Nx`.
 
 ### `mix.exs`
 
 ```elixir
 defp deps do
-  {:yolo, ">= 0.0.0"},
+  {:yolo, ">= 0.2.0"},
 
   # I'm using EXLA as Nx backend on my MacBook Air M3
   # Nx is mostly used for pre/post processing
@@ -82,8 +88,8 @@ Then you need just a few lines of code to get a list of objects detected in the 
 
 ```elixir  
 model = YOLO.load([
-  model_path: "models/yolov8n.onnx", 
-  classes_path: "models/yolov8n_classes.json",
+  model_path: "models/yolo11n.onnx", 
+  classes_path: "models/coco_classes.json",
 
   # Ortex execution providers (same as the `:ortex` config)
   # Mac with CoreML
@@ -362,7 +368,7 @@ The model's raw output needs to be post-processed to extract meaningful detectio
 The postprocessing steps are:
 
 1. **Filter Low Probability Detections**
-   - Each of the 8400 detections has probabilities for 80 classes
+   - Each detection has probabilities for all classes
    - Only keep detections where max class probability exceeds `prob_threshold` (default 0.25)
 
 2. **Non-Maximum Suppression (NMS)**
