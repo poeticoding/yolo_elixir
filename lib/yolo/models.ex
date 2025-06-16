@@ -3,8 +3,9 @@ defmodule YOLO.Models do
   This module handles loading YOLO models and running object detection on images.
   The `YOLO.Model` behaviour can be implemented for various YOLO variants.
   The supported models are:
-  - `YOLO.Models.YOLOX`: Implements the YOLOX object detection model (https://github.com/Megvii-BaseDetection/YOLOX).
   - `YOLO.Models.Ultralytics`: Implements models from the Ultralytics YOLO family (https://www.ultralytics.com).
+  - `YOLO.Models.YOLOX`: Implements the YOLOX object detection model (https://github.com/Megvii-BaseDetection/YOLOX).
+
 
   ## Main Functions
 
@@ -14,7 +15,7 @@ defmodule YOLO.Models do
     ```elixir
     YOLO.Models.load(model_path: "path/to/model.onnx",
                     classes_path: "path/to/classes.json",
-                    model_impl: YOLO.Models.YOLOX)
+                    model_impl: YOLO.Models.Ultralytics)
     ```
 
   - `YOLO.Models.detect/3`: Runs object detection on an image
@@ -25,7 +26,7 @@ defmodule YOLO.Models do
   require Logger
 
   @default_load_options [
-    model_impl: YOLO.Models.YOLOX,
+    model_impl: YOLO.Models.Ultralytics,
     eps: [:cpu],
     json_decoder: &:json.decode/1
   ]
@@ -40,10 +41,10 @@ defmodule YOLO.Models do
 
   ## Required Options
   * `model_path` - Path to the `.onnx` model file
-  * `classes_path` - Path to the `.json` file containing class labels
 
   ## Optional Options
-  * `model_impl` - Module implementing the `YOLO.Model` behaviour (default: YOLO.Models.YOLOX)
+  * `model_impl` - Module implementing the `YOLO.Model` behaviour (default: YOLO.Models.Ultralytics)
+  * `classes_path` - Path to the `.json` file containing class labels. If not provided, classes will not be loaded.
 
   * `eps` - List of execution providers to pass to Ortex (e.g. `[:coreml]`, `[:cuda]`, `[:tensorrt]`, `[:directml]`), default: `[:cpu]`
   * `json_decoder` - Function to decode JSON strings (default: `&:json.decode/1`)
@@ -56,57 +57,87 @@ defmodule YOLO.Models do
   * `shapes` - Input/output tensor shapes
   * `model_data` - Model-specific data
 
-  ## Example
+  ## Examples
     ```elixir
-    YOLO.Model.load(
-      model_path: "models/yolox-s.onnx",
+    yolox_model = YOLO.Model.load(
+      model_path: "models/yolox_s.onnx",
       classes_path: "models/coco_classes.json",
       model_impl: YOLO.Models.YOLOX
     )
     ```
+
+
+    ```elixir
+    ultralytics_model = YOLO.Model.load(
+      model_path: "models/yolo11n.onnx",
+      classes_path: "models/coco_classes.json",
+      model_impl: YOLO.Models.Ultralytics
+    )
+    ```
+
   """
   @spec load(Keyword.t()) :: YOLO.Model.t()
   def load(options) do
-    check_deprecated_default_model_impl(options)
-
     options = Keyword.merge(@default_load_options, options)
     model_impl = Keyword.fetch!(options, :model_impl)
 
     model_path = Keyword.fetch!(options, :model_path)
-    classes_path = Keyword.fetch!(options, :classes_path)
+    classes_path = Keyword.get(options, :classes_path)
     eps = Keyword.fetch!(options, :eps)
-    json_decoder = Keyword.fetch!(options, :json_decoder)
-    model_ref = Ortex.load(model_path, eps)
-    classes = load_classes(classes_path, json_decoder)
-    shapes = model_shapes(model_ref)
 
+    model_ref = Ortex.load(model_path, eps)
     Logger.info("Loaded model #{model_path} with #{inspect(eps)} execution providers")
 
-    model = %YOLO.Model{
-      ref: model_ref,
-      classes: classes,
-      model_impl: model_impl,
-      shapes: shapes
-    }
+    shapes = model_shapes(model_ref)
 
-    model_impl.init(model, options)
+    model =
+      %YOLO.Model{
+        ref: model_ref,
+        model_impl: model_impl,
+        shapes: shapes
+      }
+      |> maybe_load_classes(classes_path, Keyword.take(options, [:json_decoder]))
+      |> model_impl.init(options)
+
+    Logger.info("Initialized model #{model_path}")
+    model
   end
 
-  defp check_deprecated_default_model_impl(options) do
-    if not Keyword.has_key?(options, :model_impl) do
-      Logger.warning("""
-      DEPRECATION NOTICE: The default model implementation is now YOLO.Models.YOLOX.
-      If you are using YOLO.Models.Ultralytics, please specify it explicitly with the :model_impl option.
-      """)
+  @doc """
+  Loads class labels from a JSON file and adds them to an existing model.
+
+  ## Arguments
+  * `model` - A `YOLO.Model.t()` struct to update with class labels
+  * `classes_path` - Path to the JSON file containing class labels
+  * `options` - Keyword list of options
+
+  ## Options
+  * `json_decoder` - Function to decode JSON strings (default: `&:json.decode/1`)
+
+  ## Returns
+  An updated `YOLO.Model.t()` struct with the `classes` field populated.
+  """
+  @spec load_classes(YOLO.Model.t(), String.t(), Keyword.t()) :: YOLO.Model.t()
+  def load_classes(model, classes_path, options \\ []) do
+    options = Keyword.validate!(options, json_decoder: @default_load_options[:json_decoder])
+    json_decoder = options[:json_decoder]
+
+    classes =
+      classes_path
+      |> File.read!()
+      |> json_decoder.()
+      |> Enum.with_index(fn class, idx -> {idx, class} end)
+      |> Enum.into(%{})
+
+    %{model | classes: classes}
+  end
+
+  defp maybe_load_classes(model, classes_path, options) do
+    if classes_path do
+      load_classes(model, classes_path, options)
+    else
+      model
     end
-  end
-
-  defp load_classes(classes_path, json_decoder) do
-    classes_path
-    |> File.read!()
-    |> json_decoder.()
-    |> Enum.with_index(fn class, idx -> {idx, class} end)
-    |> Enum.into(%{})
   end
 
   @spec model_shapes(Ortex.Model.t()) :: %{(:input | :output) => tuple()}

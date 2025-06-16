@@ -36,15 +36,18 @@ defmodule YOLO.Models.YOLOX do
     {_, _channels, height, width} = model.shapes.input
     {image_nx, image_scaling} = YOLO.FrameScalers.fit(image, {height, width}, frame_scaler)
 
-    image_nx =
-      image_nx
-      |> Nx.as_type({:f, 32})
-      # {h, w, c} -> {c, h, w}
-      |> Nx.transpose(axes: [2, 0, 1])
-      # add another axis {3, 640, 640} -> {1, 3, 640, 640}
-      |> Nx.new_axis(0)
+    input_nx = do_preprocess(image_nx)
 
-    {image_nx, image_scaling}
+    {input_nx, image_scaling}
+  end
+
+  defnp do_preprocess(image_nx) do
+    image_nx
+    |> Nx.as_type({:f, 32})
+    # {h, w, c} -> {c, h, w}
+    |> Nx.transpose(axes: [2, 0, 1])
+    # add another axis {3, 640, 640} -> {1, 3, 640, 640}
+    |> Nx.new_axis(0)
   end
 
   @doc """

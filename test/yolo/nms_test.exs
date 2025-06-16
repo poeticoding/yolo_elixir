@@ -64,11 +64,53 @@ defmodule YOLO.NMSTest do
 
       filtered_probs =
         input
-        |> NMS.filter_predictions(0.7)
+        |> NMS.filter_predictions(0.7, false)
         |> Enum.map(fn [_, _, _, _, prob, _class] -> prob end)
 
       assert Enum.count(filtered_probs) > 0
-      for p <- filtered_probs, do: assert(p >= 0.7)
+      for p <- filtered_probs, do: assert(p >= 0.7 and p <= 1.0)
+    end
+
+    test "squeezes the leading batch dimension {1, 8400, 84}", %{input: input} do
+      input = Nx.new_axis(input, 0)
+      filtered_probs = NMS.filter_predictions(input, 0.7, false)
+
+      assert Enum.count(filtered_probs) == 11
+    end
+
+    test "transposes the input if :transpose is true", %{input: input} do
+      transposed_input = Nx.transpose(input)
+      transposed_input = Nx.new_axis(transposed_input, 0)
+
+      assert {1, 84, 8400} == transposed_input.shape
+
+      # squeezes and transposes the input
+      filtered_probs = NMS.filter_predictions(transposed_input, 0.7, true)
+
+      assert Enum.count(filtered_probs) == 11
+    end
+
+    test "dynamic model output shape" do
+      model_output =
+        Nx.tensor([
+          random_bbox() ++ [0, 0, 0.3],
+          random_bbox() ++ [0, 0.1, 0.0],
+          random_bbox() ++ [0.2, 0.1, 0.0],
+          random_bbox() ++ [0.2, 0.8, 0.0],
+          random_bbox() ++ [0.0, 0.0, 0.8],
+          random_bbox() ++ [0.9, 0.0, 0.0],
+          random_bbox() ++ [0.0, 0.1, 0.0],
+          random_bbox() ++ [0.0, 0.1, 0.0],
+          random_bbox() ++ [0.0, 0.1, 0.0],
+          random_bbox() ++ [0.0, 0.1, 0.0]
+        ])
+
+      assert {10, 7} == model_output.shape
+
+      filtered_bboxes = NMS.filter_predictions(model_output, 0.7, false)
+
+      assert Enum.count(filtered_bboxes) == 3
+      for [_xc, _yc, _w, _h, p, _class] <- filtered_bboxes, do: assert(p >= 0.7 and p <= 1.0)
     end
   end
 
@@ -100,5 +142,9 @@ defmodule YOLO.NMSTest do
     test "iou = 1 when bboxes have intersection = 0" do
       assert NMS.iou([10, 10, 5, 5], [100, 100, 5, 5]) == 0
     end
+  end
+
+  defp random_bbox do
+    [Enum.random(0..255), Enum.random(0..255), Enum.random(0..255), Enum.random(0..255)]
   end
 end
