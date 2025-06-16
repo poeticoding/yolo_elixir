@@ -4,13 +4,12 @@ defmodule YOLO.Integration.YOLOXTest do
   """
   use ExUnit.Case
 
-  @fixtures_path "test/fixtures"
-
-  @models_path Path.join(@fixtures_path, "models")
+  @models_path "models/"
   @classes_path Path.join(@models_path, "coco_classes.json")
   @yolox_nano_path Path.join(@models_path, "yolox_nano.onnx")
   @yolox_s_path Path.join(@models_path, "yolox_s.onnx")
 
+  @fixtures_path "test/fixtures"
   @dog_image_path Path.join(@fixtures_path, "dog.jpg")
 
   setup_all do
