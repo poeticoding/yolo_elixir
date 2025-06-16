@@ -48,6 +48,7 @@ defmodule YOLO.NMS do
   @spec run(Nx.Tensor.t(), Keyword.t()) :: [[float()]]
   def run(tensor, options \\ []) do
     options = Keyword.merge(@default_options, options)
+
     tensor
     |> filter_predictions(options[:prob_threshold], options[:transpose])
     # the results sorted desc by probability
@@ -81,9 +82,10 @@ defmodule YOLO.NMS do
   A list of detections `[cx, cy, w, h, prob, class_idx]`, sorted descending
   by `prob`. Returns `[]` if no detections meet the threshold.
   """
-  @spec filter_predictions(Nx.Tensor.t(), float(), float()) :: [[float()]]
+  @spec filter_predictions(Nx.Tensor.t(), float(), boolean()) :: [[float()]]
   def filter_predictions(model_output, prob_threshold, transpose) do
     model_output = maybe_squeeze_and_transpose(model_output, transpose: transpose)
+
     filtered_count =
       model_output
       |> count_confident_detections(prob_threshold: prob_threshold)
