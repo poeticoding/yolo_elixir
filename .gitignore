@@ -31,7 +31,7 @@ yolo-*.tar
 /priv/models/*.onnx
 /priv/models/*.pt
 
-/models/
+/models/*
 !/models/coco_classes.json
 !/models/yolox_nano.onnx
 !/models/yolox_s.onnx
