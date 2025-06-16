@@ -17,7 +17,9 @@
       * 458 iterations/second, 2.18ms per operation, 44.59KB memory
   * Made `:classes_path` optional in `YOLO.load/1`
 
-
+### Refactoring
+* `yolox_nano.onnx`, `yolox_s.onnx`, `coco_classes.json`  available under `models/` directory.
+* 
 ### Deprecations
 * fully removed `YOLO.Models.Yolov8` in favor of `YOLO.Models.Ultralytics`.
 
