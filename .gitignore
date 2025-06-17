@@ -25,6 +25,12 @@ yolo-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# Ignore python cache
+__pycache__/
+
+# Ignore python venv
+venv/
+
 .DS_Store
 
 # model directories
