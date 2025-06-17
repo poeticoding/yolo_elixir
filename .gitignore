@@ -33,6 +33,9 @@ venv/
 
 .DS_Store
 
+*.onnx
+*.pt
+
 # model directories
 /priv/models/*.onnx
 /priv/models/*.pt
