@@ -5,7 +5,7 @@
 ```elixir
 Mix.install(
   [
-    {:yolo, path: "./"},
+    {:yolo, ">= 0.0.0"},
     {:nx, "~> 0.9"},
     {:exla, "~> 0.9"},
     {:image, "~> 0.54"},
