@@ -39,6 +39,8 @@ defmodule YOLO.Model do
     - `:class_idx` - Class index
     - `:prob` - Detection probability
   """
+  alias YOLO.FrameScalers.ScalingConfig
+
   @enforce_keys [:ref, :model_impl, :shapes]
   defstruct [:ref, :classes, :model_impl, :shapes, :model_data]
 
@@ -49,8 +51,8 @@ defmodule YOLO.Model do
           shapes: %{(:input | :output) => tuple()},
           # module implementing the behaviour
           model_impl: module(),
-          classes: classes(),
-          model_data: term()
+          classes: classes() | nil,
+          model_data: term() | nil
         }
 
   @type shape :: {integer(), integer()}

@@ -38,7 +38,7 @@ defmodule YOLO.Models.Ultralytics do
       * `scaling_config` contains scaling/padding info for postprocessing
   """
   @impl true
-  @spec preprocess(YOLO.Model.t(), term(), Keyword.t()) :: {Nx.Tensor.t(), ScalingConfig}
+  @spec preprocess(YOLO.Model.t(), term(), Keyword.t()) :: {Nx.Tensor.t(), ScalingConfig.t()}
   def preprocess(model, image, options) do
     frame_scaler = Keyword.fetch!(options, :frame_scaler)
     {_, _channels, height, width} = model.shapes.input
