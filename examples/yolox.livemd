@@ -1,0 +1,318 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# YOLOX
+
+```elixir
+Mix.install(
+  [
+    {:yolo, ">= 0.0.0"},
+    {:nx, "~> 0.9"},
+    {:exla, "~> 0.9"},
+    {:image, "~> 0.54"},
+    {:evision, "~> 0.2"},
+    {:req, "~> 0.5.10"},
+    {:kino, "~> 0.16"},
+    {:kino_yolo, github: "poeticoding/kino_yolo", branch: "main"},
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+Application.put_env(:ortex, Ortex.Native, features: [:cpu])
+```
+
+## Download YOLOX model
+
+```elixir
+model_name = "yolox_m"
+
+#https://github.com/Megvii-BaseDetection/YOLOX/tree/main/demo/ONNXRuntime
+base_url = "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/"
+model_filename = "#{model_name}.onnx"
+
+%{body: data} = Req.get!("#{base_url}/#{model_filename}")
+File.write!("#{model_name}.onnx", data)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+
+17:44:11.158 [debug] redirecting to https://objects.githubusercontent.com/github-production-release-asset-2e65be/386811486/2dfe0f1c-c4e2-4697-ad7c-46cb04f404f3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250617%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250617T154411Z&X-Amz-Expires=300&X-Amz-Signature=9553822045bab5a16103fb8644b91277a53c2b52c8397020272c2702d1cd2971&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dyolox_m.onnx&response-content-type=application%2Foctet-stream
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Load and Run
+
+```elixir
+mat = Evision.imread("benchmarks/images/traffic.jpg")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Evision.Mat{
+  channels: 3,
+  dims: 2,
+  type: {:u, 8},
+  raw_type: 16,
+  shape: {1080, 1920, 3},
+  ref: #Reference<0.1897054955.4006215703.115351>
+}
+```
+
+```elixir
+model = YOLO.load(
+  model_path: model_filename, 
+  model_impl: YOLO.Models.YOLOX,
+  classes_path: "models/coco_classes.json",
+  eps: [:cpu]
+)
+
+detected_objects = 
+  model
+  |> YOLO.detect(mat, iou_threshold: 0.45, prob_threshold: 0.25)
+  |> YOLO.to_detected_objects(model.classes)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+
+17:44:17.820 [info] Loaded model yolox_m.onnx with [:cpu] execution providers
+
+17:44:17.917 [info] Initialized model yolox_m.onnx
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{
+    class: "person",
+    prob: 0.2730484902858734,
+    class_idx: 0,
+    bbox: %{h: 71, w: 33, cx: 867, cy: 209}
+  },
+  %{
+    class: "person",
+    prob: 0.2760665714740753,
+    class_idx: 0,
+    bbox: %{h: 109, w: 37, cx: 1704, cy: 339}
+  },
+  %{
+    class: "person",
+    prob: 0.42914506793022156,
+    class_idx: 0,
+    bbox: %{h: 125, w: 39, cx: 1743, cy: 420}
+  },
+  %{
+    class: "person",
+    prob: 0.4699484407901764,
+    class_idx: 0,
+    bbox: %{h: 84, w: 46, cx: 1675, cy: 387}
+  },
+  %{
+    class: "person",
+    prob: 0.5709174871444702,
+    class_idx: 0,
+    bbox: %{h: 108, w: 45, cx: 696, cy: 389}
+  },
+  %{
+    class: "person",
+    prob: 0.6232989430427551,
+    class_idx: 0,
+    bbox: %{h: 163, w: 75, cx: 46, cy: 520}
+  },
+  %{
+    class: "person",
+    prob: 0.6443946361541748,
+    class_idx: 0,
+    bbox: %{h: 118, w: 40, cx: 1502, cy: 360}
+  },
+  %{
+    class: "person",
+    prob: 0.657820999622345,
+    class_idx: 0,
+    bbox: %{h: 149, w: 55, cx: 1768, cy: 505}
+  },
+  %{
+    class: "person",
+    prob: 0.6603461503982544,
+    class_idx: 0,
+    bbox: %{h: 163, w: 54, cx: 352, cy: 457}
+  },
+  %{
+    class: "person",
+    prob: 0.740202009677887,
+    class_idx: 0,
+    bbox: %{h: 149, w: 59, cx: 802, cy: 571}
+  },
+  %{
+    class: "person",
+    prob: 0.7521814703941345,
+    class_idx: 0,
+    bbox: %{h: 118, w: 43, cx: 557, cy: 403}
+  },
+  %{
+    class: "person",
+    prob: 0.7617838382720947,
+    class_idx: 0,
+    bbox: %{h: 230, w: 98, cx: 673, cy: 851}
+  },
+  %{
+    class: "person",
+    prob: 0.7718674540519714,
+    class_idx: 0,
+    bbox: %{h: 128, w: 41, cx: 1533, cy: 412}
+  },
+  %{
+    class: "person",
+    prob: 0.7752799391746521,
+    class_idx: 0,
+    bbox: %{h: 151, w: 72, cx: 699, cy: 578}
+  },
+  %{
+    class: "person",
+    prob: 0.7786338925361633,
+    class_idx: 0,
+    bbox: %{h: 138, w: 45, cx: 1616, cy: 420}
+  },
+  %{
+    class: "person",
+    prob: 0.7892401218414307,
+    class_idx: 0,
+    bbox: %{h: 187, w: 94, cx: 731, cy: 682}
+  },
+  %{
+    class: "person",
+    prob: 0.7999732494354248,
+    class_idx: 0,
+    bbox: %{h: 240, w: 82, cx: 40, cy: 797}
+  },
+  %{
+    class: "person",
+    prob: 0.8141907453536987,
+    class_idx: 0,
+    bbox: %{h: 157, w: 69, cx: 299, cy: 559}
+  },
+  %{
+    class: "person",
+    prob: 0.8287546634674072,
+    class_idx: 0,
+    bbox: %{h: 161, w: 50, cx: 1687, cy: 491}
+  },
+  %{
+    class: "person",
+    prob: 0.8520509004592896,
+    class_idx: 0,
+    bbox: %{h: 206, w: 89, cx: 606, cy: 771}
+  },
+  %{
+    class: "person",
+    prob: 0.8624670505523682,
+    class_idx: 0,
+    bbox: %{h: 256, w: 92, cx: 470, cy: 865}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.4504697024822235,
+    class_idx: 1,
+    bbox: %{h: 70, w: 37, cx: 695, cy: 419}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.5685099959373474,
+    class_idx: 1,
+    bbox: %{h: 135, w: 66, cx: 466, cy: 969}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.6224793791770935,
+    class_idx: 1,
+    bbox: %{h: 82, w: 37, cx: 801, cy: 622}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.6391600966453552,
+    class_idx: 1,
+    bbox: %{h: 151, w: 61, cx: 590, cy: 852}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.6717647314071655,
+    class_idx: 1,
+    bbox: %{h: 109, w: 66, cx: 725, cy: 737}
+  },
+  %{
+    class: "bicycle",
+    prob: 0.706743597984314,
+    class_idx: 1,
+    bbox: %{h: 164, w: 59, cx: 671, cy: 932}
+  },
+  %{class: "car", prob: 0.3101554811000824, class_idx: 2, bbox: %{h: 39, w: 59, cx: 1028, cy: 67}},
+  %{class: "car", prob: 0.3179891109466553, class_idx: 2, bbox: %{h: 58, w: 85, cx: 1027, cy: 115}},
+  %{class: "car", prob: 0.540040135383606, class_idx: 2, bbox: %{h: 58, w: 81, cx: 1032, cy: 163}},
+  %{class: "car", prob: 0.6538744568824768, class_idx: 2, bbox: %{h: 36, w: 55, cx: 1091, cy: 17}},
+  %{class: "car", prob: 0.7471896409988403, class_idx: 2, bbox: %{h: 43, w: 74, cx: 1192, cy: 183}},
+  %{class: "car", prob: 0.7499881386756897, class_idx: 2, bbox: %{h: 75, w: 75, cx: 1168, cy: 149}},
+  %{class: "car", prob: 0.7761209607124329, class_idx: 2, bbox: %{h: 84, w: 91, cx: 1027, cy: 214}},
+  %{
+    class: "car",
+    prob: 0.8965244293212891,
+    class_idx: 2,
+    bbox: %{h: 107, w: 122, cx: 1249, cy: 324}
+  },
+  %{class: "car", prob: 0.9002096056938171, class_idx: 2, bbox: %{h: 85, w: 103, cx: 1203, cy: 239}},
+  %{class: "car", prob: 0.9072261452674866, class_idx: 2, bbox: %{h: 92, w: 99, cx: 1040, cy: 267}},
+  %{
+    class: "car",
+    prob: 0.9226636290550232,
+    class_idx: 2,
+    bbox: %{h: 121, w: 146, cx: 1303, cy: 402}
+  },
+  %{
+    class: "truck",
+    prob: 0.3016549050807953,
+    class_idx: 7,
+    bbox: %{h: 60, w: 86, cx: 1027, cy: 118}
+  },
+  %{
+    class: "truck",
+    prob: 0.8140892386436462,
+    class_idx: 7,
+    bbox: %{h: 246, w: 214, cx: 1093, cy: 473}
+  },
+  %{
+    class: "traffic light",
+    prob: 0.5662282109260559,
+    class_idx: 9,
+    bbox: %{h: 140, w: 81, cx: 1332, cy: 103}
+  },
+  %{
+    class: "traffic light",
+    prob: 0.6133936643600464,
+    class_idx: 9,
+    bbox: %{h: 134, w: 79, cx: 865, cy: 113}
+  },
+  %{
+    class: "traffic light",
+    prob: 0.6605126857757568,
+    class_idx: 9,
+    bbox: %{h: 106, w: 43, cx: 195, ...}
+  },
+  %{class: "backpack", prob: 0.3358326852321625, class_idx: 24, bbox: %{h: 77, w: 49, ...}},
+  %{class: "backpack", prob: 0.3416420519351959, class_idx: 24, bbox: %{h: 86, ...}}
+]
+```
+
+```elixir
+{:ok, image} = Image.from_evision(mat)
+KinoYOLO.Draw.draw_detected_objects(image, detected_objects)
+```

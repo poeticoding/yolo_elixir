@@ -1,5 +1,5 @@
-ultralytics==8.2.36
-onnx==1.16.1
-onnxruntime==1.18.0
+ultralytics==8.3.155
+onnx==1.18.0
+onnxruntime==1.22.0
 onnx_pytorch==0.1.5
 requests
