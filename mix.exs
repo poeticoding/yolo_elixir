@@ -75,13 +75,13 @@ defmodule YOLO.MixProject do
       extras: extras(),
       assets: %{"guides/images" => "guides/images"},
       groups_for_extras: [
-        "Examples": [
+        Examples: [
           "examples/ultralytics_yolo.livemd",
           "examples/yolox.livemd",
           "examples/webcam.livemd",
           "examples/yolo_oiv7.livemd"
         ],
-        "Benchmarks": [
+        Benchmarks: [
           "guides/benchmarks.md",
           "guides/benchmarks/macbook_air_m3.md"
         ]
@@ -94,16 +94,12 @@ defmodule YOLO.MixProject do
       "README.md",
       "guides/ultralytics_to_onnx.md",
       "guides/under_the_hood.md",
-
       "guides/benchmarks.md",
       "guides/benchmarks/macbook_air_m3.md",
-
-
       "examples/ultralytics_yolo.livemd",
       "examples/yolox.livemd",
       "examples/webcam.livemd",
-      "examples/yolo_oiv7.livemd",
-
+      "examples/yolo_oiv7.livemd"
     ]
   end
 end
