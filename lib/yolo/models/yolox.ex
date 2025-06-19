@@ -2,7 +2,7 @@ defmodule YOLO.Models.YOLOX do
   @moduledoc """
   YOLOX model implementation for preprocessing input images and postprocessing detections using non-maximum suppression (NMS).
 
-  Supports YOLOX models found at [https://github.com/Megvii-BaseDetection/YOLOX](github.com/Megvii-BaseDetection/YOLOX)
+  Supports YOLOX models found at [https://github.com/Megvii-BaseDetection/YOLOX](https://github.com/Megvii-BaseDetection/YOLOX)
 
   If using a YOLOX model that was exported with `--decode_in_inference`, you can set
   `decode_head: false` in the YOLO.detect/3 options.

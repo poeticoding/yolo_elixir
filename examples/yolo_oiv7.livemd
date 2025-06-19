@@ -1,0 +1,169 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Ultralytics YOLOv8 - Open Images V7
+
+```elixir
+Mix.install(
+  [
+    {:yolo, ">= 0.0.0"},
+    {:nx, "~> 0.9"},
+    {:exla, "~> 0.9"},
+    {:image, "~> 0.54"},
+    {:evision, "~> 0.2"},
+    {:kino, "~> 0.16"},
+    {:kino_yolo, github: "poeticoding/kino_yolo", branch: "main"},
+    {:pythonx, "~> 0.4.2"},
+    {:kino_pythonx, "~> 0.1.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+Application.put_env(:ortex, Ortex.Native, features: [:cpu])
+```
+
+```pyproject.toml
+[project]
+name = "ultralytics_to_onnx"
+version = "0.0.0"
+requires-python = "==3.13.*"
+dependencies = [
+  "ultralytics==8.3.155",
+  "onnx==1.18.0",
+  "onnxruntime==1.22.0",
+  "onnx_pytorch==0.1.5",
+  "requests"
+]
+```
+
+## Ultralytics yolov8l-oiv7 to ONNX
+
+```elixir
+# https://docs.ultralytics.com/datasets/detect/open-images-v7/
+model_name = "yolov8x-oiv7"
+
+image_path = "benchmarks/images/table.jpg"
+model_path = "#{model_name}.onnx"
+classes_path = "#{model_name}_classes.json"
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+```elixir
+Pythonx.eval(
+  """
+  from ultralytics import YOLO
+  import json
+  
+  IMAGE_SIZE = 640
+  model_name = model_name.decode("utf-8")
+  
+  model = YOLO(model_name)
+  model.export(format='onnx', imgsz=IMAGE_SIZE, opset=12)
+
+  # Export the categories
+  with open(classes_path, "w") as f:
+    data = [model.names[idx] for idx in model.names]
+    json.dump(data, f)
+  """,
+  %{"model_name" => model_name, "classes_path" => classes_path}
+)
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+nil
+```
+
+## Load and Run
+
+```elixir
+mat = Evision.imread(image_path)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Evision.Mat{
+  channels: 3,
+  dims: 2,
+  type: {:u, 8},
+  raw_type: 16,
+  shape: {1138, 640, 3},
+  ref: #Reference<0.2823733541.3473539090.13647>
+}
+```
+
+```elixir
+model = YOLO.load(model_path: model_path, classes_path: classes_path, eps: [:cpu])
+
+detected_objects = 
+  model
+  |> YOLO.detect(mat, iou_threshold: 0.45, prob_threshold: 0.25)
+  |> YOLO.to_detected_objects(model.classes)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+
+18:27:35.461 [info] Loaded model yolov8x-oiv7.onnx with [:cpu] execution providers
+
+18:27:35.461 [info] Initialized model yolov8x-oiv7.onnx
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{
+    class: "Food",
+    prob: 0.2534943222999573,
+    bbox: %{h: 38, w: 73, cx: 257, cy: 468},
+    class_idx: 199
+  },
+  %{
+    class: "Food",
+    prob: 0.3215067982673645,
+    bbox: %{h: 72, w: 134, cx: 512, cy: 515},
+    class_idx: 199
+  },
+  %{
+    class: "Food",
+    prob: 0.35645782947540283,
+    bbox: %{h: 35, w: 99, cx: 351, cy: 385},
+    class_idx: 199
+  },
+  %{
+    class: "Food",
+    prob: 0.5081610679626465,
+    bbox: %{h: 70, w: 117, cx: 389, cy: 484},
+    class_idx: 199
+  },
+  %{
+    class: "Kitchen appliance",
+    prob: 0.2527419328689575,
+    bbox: %{h: 45, w: 64, cx: 38, cy: 33},
+    class_idx: 291
+  },
+  %{
+    class: "Table",
+    prob: 0.7417454123497009,
+    bbox: %{h: 896, w: 640, cx: 320, cy: 673},
+    class_idx: 514
+  }
+]
+```
+
+```elixir
+{:ok, image} = Image.from_evision(mat)
+KinoYOLO.Draw.draw_detected_objects(image, detected_objects)
+```

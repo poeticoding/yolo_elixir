@@ -1,0 +1,98 @@
+# Real-time Object Detection
+
+```elixir
+Mix.install(
+  [
+    {:yolo, ">= 0.0.0"},
+    {:nx, "~> 0.9"},
+    {:exla, "~> 0.9"},
+    {:image, "~> 0.54"},
+    {:evision, "~> 0.2"},
+    {:kino, "~> 0.16"},
+    {:kino_yolo, github: "poeticoding/kino_yolo", branch: "main"},
+    {:pythonx, "~> 0.4.2"},
+    {:kino_pythonx, "~> 0.1.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+Application.put_env(:ortex, Ortex.Native, features: [:cpu])
+```
+
+```pyproject.toml
+[project]
+name = "realtime_object_detection"
+version = "0.0.0"
+requires-python = "==3.13.*"
+dependencies = [
+  "ultralytics==8.3.155",
+  "onnx==1.18.0",
+  "onnxruntime==1.22.0",
+  "onnx_pytorch==0.1.5",
+  "requests"
+]
+```
+
+## Define model and paths
+
+```elixir
+model_name = "yolo11n"
+
+model_path = "#{model_name}.onnx"
+classes_path = "models/coco_classes.json"
+:ok
+```
+
+## Ultralytics Yolo11 to ONNX
+
+```elixir
+Pythonx.eval(
+  """
+  from ultralytics import YOLO
+  IMAGE_SIZE = 640
+  model_name = model_name.decode("utf-8")
+  
+  model = YOLO(model_name)
+  model.export(format='onnx', imgsz=IMAGE_SIZE, opset=12)
+  """,
+  %{"model_name" => model_name}
+)
+:ok
+```
+
+## Load model
+
+```elixir
+model = YOLO.load(model_path: model_path, classes_path: classes_path)
+```
+
+## Load WebCam with Evision
+
+```elixir
+camera = Evision.VideoCapture.videoCapture(0)
+```
+
+```elixir
+Evision.VideoCapture.read(camera)
+```
+
+## Run Object Detection and render detections on the frame
+
+```elixir
+Stream.repeatedly(fn -> 
+  mat = Evision.VideoCapture.read(camera)
+
+  detected_objects =
+    model
+    |> YOLO.detect(mat)
+    |> YOLO.to_detected_objects(model.classes)
+  
+  {mat, detected_objects}
+end)
+|> Kino.animate(fn {mat, detected_objects} ->
+  {:ok, image} = Image.from_evision(mat)
+  KinoYOLO.Draw.draw_detected_objects(image, detected_objects)
+end)
+```

@@ -1,7 +1,12 @@
 from ultralytics import YOLO
+import sys
 import time
 
-model = YOLO("models/yolov8n.pt")
+model_path = sys.argv[1]
+# default to cpu, can be "mps" or "cuda"
+device = sys.argv[2] if len(sys.argv) > 2 else "cpu"
+
+model = YOLO(model_path)
 
 total = 0
 count = 0
@@ -10,14 +15,14 @@ max_time = -1
 
 # warmup
 for i in range(1, 10):
-  model(["benchmarks/images/traffic.jpg"], device='cpu')
+  model(["benchmarks/images/traffic.jpg"], device=device)
   # Mac
   # model(["benchmarks/images/traffic.jpg"], device='mps')
   
   # CUDA
   # model(["benchmarks/images/traffic.jpg"], device='cuda')
 
-for i in range(1, 10):
+for i in range(0, 10):
   start = time.time()
   model(["benchmarks/images/traffic.jpg"])
   stop = time.time()

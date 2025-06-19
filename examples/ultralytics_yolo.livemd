@@ -1,0 +1,392 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Ultralytics Yolo11 - CPU
+
+```elixir
+Mix.install(
+  [
+    {:yolo, ">= 0.0.0"},
+    {:nx, "~> 0.9"},
+    {:exla, "~> 0.9"},
+    {:image, "~> 0.54"},
+    {:evision, "~> 0.2"},
+    {:kino, "~> 0.16"},
+    {:kino_yolo, github: "poeticoding/kino_yolo", branch: "main"},
+    {:pythonx, "~> 0.4.2"},
+    {:kino_pythonx, "~> 0.1.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+Application.put_env(:ortex, Ortex.Native, features: [:cpu])
+```
+
+```pyproject.toml
+[project]
+name = "ultralytics_to_onnx"
+version = "0.0.0"
+requires-python = "==3.13.*"
+dependencies = [
+  "ultralytics==8.3.155",
+  "onnx==1.18.0",
+  "onnxruntime==1.22.0",
+  "onnx_pytorch==0.1.5",
+  "requests"
+]
+```
+
+## Define model and paths
+
+```elixir
+model_name = "yolo11m"
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"yolo11m"
+```
+
+```elixir
+image_path = "benchmarks/images/traffic.jpg"
+model_path = "#{model_name}.onnx"
+classes_path = "models/coco_classes.json"
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Ultralytics Yolo11 to ONNX
+
+```elixir
+Pythonx.eval(
+  """
+  from ultralytics import YOLO
+  IMAGE_SIZE = 640
+  model_name = model_name.decode("utf-8")
+  
+  model = YOLO(model_name)
+  model.export(format='onnx', imgsz=IMAGE_SIZE, opset=12)
+  """,
+  %{"model_name" => model_name}
+)
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Downloading https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt to 'yolo11m.pt'...
+Ultralytics 8.3.155 🚀 Python-3.13.1 torch-2.7.1 CPU (Apple M3)
+YOLO11m summary (fused): 125 layers, 20,091,712 parameters, 0 gradients, 68.0 GFLOPs
+
+PyTorch: starting from 'yolo11m.pt' with input shape (1, 3, 640, 640) BCHW and output shape(s) (1, 84, 8400) (38.8 MB)
+requirements: Ultralytics requirements ['onnx>=1.12.0,<1.18.0', 'onnxslim>=0.1.56'] not found, attempting AutoUpdate...
+Requirement already satisfied: onnx<1.18.0,>=1.12.0 in ./venv/lib/python3.10/site-packages (1.17.0)
+Requirement already satisfied: onnxslim>=0.1.56 in ./venv/lib/python3.10/site-packages (0.1.57)
+Requirement already satisfied: protobuf>=3.20.2 in ./venv/lib/python3.10/site-packages (from onnx<1.18.0,>=1.12.0) (6.31.1)
+Requirement already satisfied: numpy>=1.20 in ./venv/lib/python3.10/site-packages (from onnx<1.18.0,>=1.12.0) (2.2.6)
+Requirement already satisfied: packaging in ./venv/lib/python3.10/site-packages (from onnxslim>=0.1.56) (25.0)
+Requirement already satisfied: sympy in ./venv/lib/python3.10/site-packages (from onnxslim>=0.1.56) (1.14.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./venv/lib/python3.10/site-packages (from sympy->onnxslim>=0.1.56) (1.3.0)
+
+requirements: AutoUpdate success ✅ 0.8s
+WARNING ⚠️ requirements: Restart runtime or rerun command for updates to take effect
+
+
+ONNX: starting export with onnx 1.18.0 opset 12...
+WARNING ⚠️ ONNX: simplifier failure: No module named 'onnxslim'
+ONNX: export success ✅ 1.4s, saved as 'yolo11m.onnx' (76.9 MB)
+
+Export complete (1.9s)
+Results saved to /Users/alvise/code/yolo_elixir
+Predict:         yolo predict task=detect model=yolo11m.onnx imgsz=640  
+Validate:        yolo val task=detect model=yolo11m.onnx imgsz=640 data=/ultralytics/ultralytics/cfg/datasets/coco.yaml  
+Visualize:       https://netron.app
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Load image
+
+```elixir
+mat = Evision.imread(image_path)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Evision.Mat{
+  channels: 3,
+  dims: 2,
+  type: {:u, 8},
+  raw_type: 16,
+  shape: {1080, 1920, 3},
+  ref: #Reference<0.2594270970.3468558359.70281>
+}
+```
+
+## Load and run YOLO
+
+```elixir
+model = YOLO.load(model_path: model_path, classes_path: classes_path, eps: [:cpu])
+
+detected_objects = 
+  model
+  |> YOLO.detect(mat, iou_threshold: 0.45, prob_threshold: 0.25)
+  |> YOLO.to_detected_objects(model.classes)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+
+17:41:08.764 [info] Loaded model yolo11m.onnx with [:cpu] execution providers
+
+17:41:08.765 [info] Initialized model yolo11m.onnx
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{
+    class: "person",
+    prob: 0.3464750051498413,
+    bbox: %{h: 95, w: 47, cx: 1675, cy: 391},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.34952861070632935,
+    bbox: %{h: 160, w: 57, cx: 1768, cy: 501},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.36030319333076477,
+    bbox: %{h: 157, w: 55, cx: 355, cy: 462},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.5312483310699463,
+    bbox: %{h: 110, w: 50, cx: 695, cy: 386},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.5382186770439148,
+    bbox: %{h: 155, w: 64, cx: 803, cy: 570},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.5533820390701294,
+    bbox: %{h: 165, w: 76, cx: 44, cy: 521},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.5973995923995972,
+    bbox: %{h: 141, w: 43, cx: 1617, cy: 421},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.6149826049804688,
+    bbox: %{h: 128, w: 42, cx: 1533, cy: 413},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.6478251814842224,
+    bbox: %{h: 120, w: 44, cx: 556, cy: 403},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7199457883834839,
+    bbox: %{h: 157, w: 52, cx: 1685, cy: 491},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7302370667457581,
+    bbox: %{h: 197, w: 94, cx: 733, cy: 687},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7496381402015686,
+    bbox: %{h: 130, w: 69, cx: 701, cy: 567},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7714580297470093,
+    bbox: %{h: 156, w: 64, cx: 302, cy: 558},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7862504720687866,
+    bbox: %{h: 222, w: 90, cx: 469, cy: 846},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.7874720096588135,
+    bbox: %{h: 238, w: 81, cx: 41, cy: 801},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.8138344883918762,
+    bbox: %{h: 233, w: 101, cx: 679, cy: 848},
+    class_idx: 0
+  },
+  %{
+    class: "person",
+    prob: 0.8157120943069458,
+    bbox: %{h: 200, w: 81, cx: 605, cy: 768},
+    class_idx: 0
+  },
+  %{
+    class: "bicycle",
+    prob: 0.4413682520389557,
+    bbox: %{h: 83, w: 32, cx: 803, cy: 625},
+    class_idx: 1
+  },
+  %{
+    class: "bicycle",
+    prob: 0.4464598298072815,
+    bbox: %{h: 135, w: 56, cx: 599, cy: 849},
+    class_idx: 1
+  },
+  %{
+    class: "bicycle",
+    prob: 0.4616367518901825,
+    bbox: %{h: 182, w: 56, cx: 675, cy: 925},
+    class_idx: 1
+  },
+  %{
+    class: "bicycle",
+    prob: 0.5315952897071838,
+    bbox: %{h: 75, w: 42, cx: 694, cy: 416},
+    class_idx: 1
+  },
+  %{
+    class: "bicycle",
+    prob: 0.6614882349967957,
+    bbox: %{h: 165, w: 69, cx: 464, cy: 955},
+    class_idx: 1
+  },
+  %{
+    class: "bicycle",
+    prob: 0.6782569885253906,
+    bbox: %{h: 113, w: 63, cx: 725, cy: 737},
+    class_idx: 1
+  },
+  %{class: "car", prob: 0.35281914472579956, bbox: %{h: 35, w: 57, cx: 1090, cy: 18}, class_idx: 2},
+  %{
+    class: "car",
+    prob: 0.4985942840576172,
+    bbox: %{h: 245, w: 224, cx: 1098, cy: 474},
+    class_idx: 2
+  },
+  %{class: "car", prob: 0.5132410526275635, bbox: %{h: 64, w: 84, cx: 1034, cy: 167}, class_idx: 2},
+  %{class: "car", prob: 0.5697806477546692, bbox: %{h: 71, w: 79, cx: 1172, cy: 149}, class_idx: 2},
+  %{class: "car", prob: 0.6225624084472656, bbox: %{h: 49, w: 80, cx: 1193, cy: 187}, class_idx: 2},
+  %{class: "car", prob: 0.652853786945343, bbox: %{h: 86, w: 97, cx: 1024, cy: 212}, class_idx: 2},
+  %{class: "car", prob: 0.7560621500015259, bbox: %{h: 81, w: 105, cx: 1203, cy: 238}, class_idx: 2},
+  %{
+    class: "car",
+    prob: 0.8117802143096924,
+    bbox: %{h: 110, w: 129, cx: 1254, cy: 324},
+    class_idx: 2
+  },
+  %{class: "car", prob: 0.8485523462295532, bbox: %{h: 88, w: 102, cx: 1038, cy: 268}, class_idx: 2},
+  %{
+    class: "car",
+    prob: 0.8879761695861816,
+    bbox: %{h: 121, w: 148, cx: 1301, cy: 402},
+    class_idx: 2
+  },
+  %{
+    class: "motorcycle",
+    prob: 0.2533663511276245,
+    bbox: %{h: 43, w: 28, cx: 866, cy: 228},
+    class_idx: 3
+  },
+  %{
+    class: "truck",
+    prob: 0.580411970615387,
+    bbox: %{h: 246, w: 223, cx: 1098, cy: 474},
+    class_idx: 7
+  },
+  %{
+    class: "traffic light",
+    prob: 0.30687159299850464,
+    bbox: %{h: 46, w: 44, cx: 1478, cy: 225},
+    class_idx: 9
+  },
+  %{
+    class: "traffic light",
+    prob: 0.4421222507953644,
+    bbox: %{h: 137, w: 75, cx: 864, cy: 113},
+    class_idx: 9
+  },
+  %{
+    class: "traffic light",
+    prob: 0.6856074929237366,
+    bbox: %{h: 104, w: 38, cx: 195, cy: 387},
+    class_idx: 9
+  },
+  %{
+    class: "traffic light",
+    prob: 0.7127625346183777,
+    bbox: %{h: 141, w: 77, cx: 1333, cy: 103},
+    class_idx: 9
+  },
+  %{
+    class: "backpack",
+    prob: 0.3877813518047333,
+    bbox: %{h: 67, w: 35, cx: 449, cy: 951},
+    class_idx: 24
+  },
+  %{
+    class: "backpack",
+    prob: 0.6103652119636536,
+    bbox: %{h: 58, w: 51, cx: 719, cy: 646},
+    class_idx: 24
+  },
+  %{
+    class: "backpack",
+    prob: 0.6811151504516602,
+    bbox: %{h: 76, w: 55, cx: 28, cy: 759},
+    class_idx: 24
+  },
+  %{
+    class: "handbag",
+    prob: 0.3150494694709778,
+    bbox: %{h: 45, w: 51, cx: 1768, cy: 488},
+    class_idx: 26
+  }
+]
+```
+
+```elixir
+{:ok, image} = Image.from_evision(mat)
+KinoYOLO.Draw.draw_detected_objects(image, detected_objects)
+```

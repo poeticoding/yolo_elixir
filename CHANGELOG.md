@@ -1,4 +1,5 @@
-## v0.2.0 (2025-06)
+## v0.2.0 (2025-06-19)
+🎉 This release is a big one: YOLOX support is here, bringing a super-fast model under the much more permissive Apache 2.0 license (no more AGPL headaches!). Even more exciting, postprocessing is now fully model-agnostic—so you’re no longer limited to COCO-trained models, but can use your own custom-trained models and class lists with ease. Unlock new use cases and deploy anywhere!
 
 ### Enhancements
   * Added YOLOX support - thanks @aspett (Andrew Pett)!
@@ -16,10 +17,11 @@
     * Old implementation:
       * 458 iterations/second, 2.18ms per operation, 44.59KB memory
   * Made `:classes_path` optional in `YOLO.load/1`
+  * Added benchmark scripts to measure performance on different models and hardware.
+  * Added new Livebook examples for Ultralytics YOLO, YOLOX, a model trained on Open Images V7, and real-time webcam detection.
+  * `yolox_nano.onnx`, `yolox_s.onnx`, `coco_classes.json`  available under `models/` directory (used in tests).
 
-### Refactoring
-* `yolox_nano.onnx`, `yolox_s.onnx`, `coco_classes.json`  available under `models/` directory.
-* 
+ 
 ### Deprecations
 * fully removed `YOLO.Models.Yolov8` in favor of `YOLO.Models.Ultralytics`.
 
