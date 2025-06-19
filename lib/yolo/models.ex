@@ -140,7 +140,7 @@ defmodule YOLO.Models do
     end
   end
 
-  @spec model_shapes(Ortex.Model.t()) :: %{(:input | :output) => tuple()}
+  @spec model_shapes(term()) :: %{(:input | :output) => tuple()}
   defp model_shapes(ref) do
     {[{_, _, input_shape}], [{_, _, output_shape}]} =
       Ortex.Native.show_session(ref.reference)

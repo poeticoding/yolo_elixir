@@ -14,6 +14,8 @@ defmodule YOLO.Models.YOLOX do
 
   import Nx.Defn
 
+  alias YOLO.FrameScalers.ScalingConfig
+
   @impl true
   def init(model, options) do
     {_, _, height, width} = model.shapes.input
@@ -30,7 +32,7 @@ defmodule YOLO.Models.YOLOX do
   Tiny and Nano models use 416x416, while other models use 640x640.
   """
   @impl true
-  @spec preprocess(YOLO.Model.t(), term(), Keyword.t()) :: {Nx.Tensor.t(), ScalingConfig}
+  @spec preprocess(YOLO.Model.t(), term(), Keyword.t()) :: {Nx.Tensor.t(), ScalingConfig.t()}
   def preprocess(model, image, options) do
     frame_scaler = Keyword.fetch!(options, :frame_scaler)
     {_, _channels, height, width} = model.shapes.input
