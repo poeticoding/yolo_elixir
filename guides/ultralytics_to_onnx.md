@@ -1,4 +1,4 @@
-## Ultralytics to ONNX python script
+# Ultralytics to ONNX
 
 Download the PyTorch model from the [Ultralytics assets repository](https://github.com/ultralytics/assets/releases/tag/v8.3.0). At the moment, the latest version is YOLOv11, available in various sizes: `yolov11n.pt` (nano), `yolov11s.pt` (small), `yolov11m.pt` (medium), etc. For detailed specifications of each model variant, visit the [Ultralytics documentation](https://docs.ultralytics.com/tasks/detect/#models).
 

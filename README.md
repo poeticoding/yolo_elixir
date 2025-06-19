@@ -25,7 +25,7 @@ The library is built with the following objectives:
 The library requires YOLO models in ONNX format, which combines both the neural network architecture and pre-trained weights. Currently, we support two model families:
 
 * **YOLOX**: Pre-converted ONNX models are available directly from the [YOLOX repository](https://github.com/Megvii-BaseDetection/YOLOX/tree/main/demo/ONNXRuntime)
-* [**Ultralytics**](guides/ultralytics.md): These models need to be converted from PyTorch (.pt) to ONNX format (https://github.com/ultralytics/assets/releases/tag/v8.3.0) [follow this simple guide to prepare the model in ONNX format](guides/ultralytics.md)
+* [**Ultralytics**](guides/ultralytics_to_onnx.md): These models need to be converted from PyTorch (.pt) to ONNX format (https://github.com/ultralytics/assets/releases/tag/v8.3.0) [follow this simple guide to prepare the model in ONNX format](guides/ultralytics_to_onnx.md)
 
 
 All these models come in different sizes, like *n (nano)*, *s (small)*, *m (medium)*, *l (large)*, and *x (extra-large)*. Larger models offer better performance in terms of classification accuracy and object detection but require more computational resources and memory.
