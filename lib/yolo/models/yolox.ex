@@ -141,8 +141,12 @@ defmodule YOLO.Models.YOLOX do
     # {n, 1}
     objectness = Nx.slice_along_axis(predictions, 4, 1, axis: 1)
 
-    # {n, 80}
-    class_probs = Nx.slice_along_axis(predictions, 5, 80, axis: 1)
+    # Calculate number of classes dynamically: total columns - 5 (4 bbox + 1 objectness)
+    {_batch_size, bbox_and_classes_cols_num} = Nx.shape(predictions)
+    num_classes = bbox_and_classes_cols_num - 5
+
+    # {n, num_classes}
+    class_probs = Nx.slice_along_axis(predictions, 5, num_classes, axis: 1)
 
     # Yolox calculates detection scores as the product of maximum class probabilities and objectness score
     scores = Nx.multiply(class_probs, objectness)

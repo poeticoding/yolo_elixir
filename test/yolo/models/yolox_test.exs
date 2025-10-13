@@ -392,6 +392,58 @@ defmodule YOLO.Models.YOLOXTest do
     end
   end
 
+  describe "calculate_max_prob_score_per_prediction/1 - dynamic class count" do
+    test "works with 10 classes" do
+      # Format: 4 bbox + 1 objectness + 10 classes = 15 columns total
+      predictions = Nx.broadcast(0.0, {2, 15})
+      # Set some test values
+      predictions =
+        predictions
+        # bbox + objectness
+        |> Nx.put_slice([0, 0], Nx.tensor([[1.0, 2.0, 3.0, 4.0, 0.8]]))
+        # class probs
+        |> Nx.put_slice([0, 5], Nx.tensor([[0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]))
+        # bbox + objectness
+        |> Nx.put_slice([1, 0], Nx.tensor([[5.0, 6.0, 7.0, 8.0, 0.6]]))
+        # class probs
+        |> Nx.put_slice([1, 5], Nx.tensor([[0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7]]))
+
+      result = YOLOX.calculate_max_prob_score_per_prediction(predictions)
+
+      # Should return 6 columns: [cx, cy, w, h, prob, class]
+      assert Nx.shape(result) == {2, 6}
+
+      # First detection: max class prob is 0.9 at index 1, score = 0.9 * 0.8 = 0.72
+      assert result[[0, 4]] |> Nx.to_number() |> Float.round(2) == 0.72
+      assert result[[0, 5]] |> Nx.to_number() == 1.0
+
+      # Second detection: max class prob is 0.7 at index 9, score = 0.7 * 0.6 = 0.42
+      assert result[[1, 4]] |> Nx.to_number() |> Float.round(2) == 0.42
+      assert result[[1, 5]] |> Nx.to_number() == 9.0
+    end
+
+    test "works with 1 class" do
+      # Format: 4 bbox + 1 objectness + 1 class = 6 columns total
+      predictions = Nx.broadcast(0.0, {1, 6})
+      # Set test values
+      predictions =
+        predictions
+        # bbox + objectness
+        |> Nx.put_slice([0, 0], Nx.tensor([[1.0, 2.0, 3.0, 4.0, 0.6]]))
+        # single class prob
+        |> Nx.put_slice([0, 5], Nx.tensor([[0.8]]))
+
+      result = YOLOX.calculate_max_prob_score_per_prediction(predictions)
+
+      # Should return 6 columns: [cx, cy, w, h, prob, class]
+      assert Nx.shape(result) == {1, 6}
+
+      # Max class prob is 0.8 at index 0, score = 0.8 * 0.6 = 0.48
+      assert result[[0, 4]] |> Nx.to_number() |> Float.round(2) == 0.48
+      assert result[[0, 5]] |> Nx.to_number() == 0.0
+    end
+  end
+
   defp equal?(a, b) do
     Nx.equal(a, b) |> Nx.all() |> Nx.to_number() == 1
   end
