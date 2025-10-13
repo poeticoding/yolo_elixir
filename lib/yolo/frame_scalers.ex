@@ -85,7 +85,7 @@ defmodule YOLO.FrameScalers do
     {scaled_width, scaled_height} =
       if width_ratio < height_ratio do
         # landscape, width = model input size
-        {model_input_height, ceil(image_height * ratio)}
+        {model_input_width, ceil(image_height * ratio)}
       else
         # portrait or squared, height = model input size
         {ceil(image_width * ratio), model_input_height}
