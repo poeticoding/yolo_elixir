@@ -11,7 +11,7 @@ You Only Look Once (YOLO) is a cutting-edge, real-time object detection system. 
 The library is built with the following objectives:  
 
 1. **Speed**  
-   Achieve real-time object detection performance, even on resource-constrained devices like a MacBook Air M3. Details about performance can be found in the [benchmarks section](#benchmarks).  
+   Achieve real-time object detection performance, even on resource-constrained devices like a MacBook Air M3. Details about performance can be found in the [benchmarks section](https://github.com/poeticoding/yolo_elixir/blob/main/guides/benchmarks.md).  
 
 2. **Ease of Use**  
    Designed to be straightforward and user-friendly, the library enables developers to load and detect objects with just two function calls.
